@@ -277,7 +277,7 @@ function pageDragEnd(e) {
   if (!pd || pd.id !== e.pointerId) return;
   pageDrag = null;
   if (!pd.turn) return;
-  const { layer, old, same } = pd.turn;
+  const { layer, old } = pd.turn;
   if (pd.prog > 0.28) {
     // ver genoeg: het blad valt vanzelf verder om
     pd.anims.forEach((a) => a.play());
@@ -289,7 +289,7 @@ function pageDragEnd(e) {
     animateTurn.t = setTimeout(() => {
       layer.remove();
       curPage = old;
-      if (same) applyAlbumState(true); else buildAlbum();
+      buildAlbum();
     }, TURN_MS * pd.prog + 30);
   }
 }
@@ -299,10 +299,9 @@ function beginTurn(dir) {
   let p = curPage + dir * (L.single ? 1 : 2);
   if (p < 0 || p >= PAGES.length || albumEl.querySelector('.turnlayer')) return null;
   const old = curPage, oldSnap = snapPages();
-  const same = p - (p % 2) === old - (old % 2);
   curPage = p;
-  if (same) applyAlbumState(true); else buildAlbum();
-  return { old, same, layer: animateTurn(old, p, oldSnap, true) };
+  swapAlbum();
+  return { old, layer: animateTurn(old, p, oldSnap, true) };
 }
 window.addEventListener('pointermove', (e) => {
   const p = bgPointers.get(e.pointerId);
@@ -342,8 +341,12 @@ table.addEventListener('wheel', (e) => {
   zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
 }, { passive: false });
 
-function buildAlbum() {
-  stage.querySelector('.albumwrap')?.remove();
+// hold = de oude map blijft nog even staan en de nieuwe is onzichtbaar tot alle plaatjes klaar zijn
+// (anders flikkert het bij het omslaan); animateTurn wisselt ze om.
+function buildAlbum(hold = false) {
+  stage.querySelectorAll('.albumwrap.oldwrap').forEach((w) => w.remove());
+  const oldWrap = stage.querySelector('.albumwrap');
+  if (hold && oldWrap) oldWrap.classList.add('oldwrap'); else oldWrap?.remove();
   if (!L.single) curPage -= curPage % 2;
   const wrap = document.createElement('div');
   wrap.className = 'albumwrap';
@@ -438,6 +441,7 @@ function buildAlbum() {
   let slabs = '';
   for (let z = 1.5; z < BOOK_T * L.u; z += 1.5) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
   album.insertAdjacentHTML('beforeend', slabs);
+  if (hold && oldWrap) wrap.style.visibility = 'hidden';
   stage.prepend(wrap);
   applyAlbumState(true);
   updateCount();
@@ -621,13 +625,18 @@ function setPage(p) {
   if (!L.single) p -= p % 2;
   if (p === curPage) return;
   const old = curPage, oldSnap = snapPages();
-  const sameSpread = p - (p % 2) === old - (old % 2);
   curPage = p;
-  if (sameSpread) applyAlbumState(true);
-  else buildAlbum();                       // andere bladen: opnieuw opbouwen
+  swapAlbum();
   animateTurn(old, p, oldSnap);
   snd('page');
   save();
+}
+
+// bouwt de map voor de nieuwe bladzijde op, maar laat op het scherm nog alles zoals het was
+function swapAlbum() {
+  const stowed = discs.map((d) => d.el.classList.contains('stowed'));
+  buildAlbum(true);
+  discs.forEach((d, i) => d.el.classList.toggle('stowed', stowed[i]));
 }
 
 // ---------- bladzijde omslaan ----------
@@ -673,7 +682,7 @@ function animateTurn(from, to, oldSnap, manual) {
     // één bladzijde in beeld: het blad draait weg over de linkerrand (of komt daarvandaan terug)
     layer.classList.add('one');
     layer.innerHTML = fwd
-      ? `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[from], '')}</div>`
+      ? flat(newSnap[to], 0) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[from], '')}</div>`   // eronder de nieuwe bladzijde mét zijn flippo's
       : flat(oldSnap[from], 0) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(newSnap[to], '')}</div>`;
   } else {
     const ob = from - (from % 2), nb = to - (to % 2);
@@ -682,10 +691,27 @@ function animateTurn(from, to, oldSnap, manual) {
       : flat(newSnap[nb], 0) + flat(oldSnap[ob + 1], rightX) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:100% 50%">${strips(oldSnap[ob], newSnap[nb + 1])}</div>`;
   }
   albumEl.appendChild(layer);
-  // de echte flippo's even weg; de momentopname laat ze zien tot het blad ligt
-  discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
-  if (manual) return layer;       // het blad wordt met de hand bewogen
-  animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); }, 720);
+  // Pas wisselen als alle plaatjes van de nieuwe map en het omslaande blad getekend kunnen worden.
+  const wrap = albumEl.parentNode, oldWrap = stage.querySelector('.albumwrap.oldwrap');
+  const anims = manual ? [] : layer.getAnimations({ subtree: true });
+  anims.forEach((a) => a.pause());
+  let shown = false;
+  const reveal = () => {
+    if (shown) return;
+    shown = true;
+    oldWrap?.remove();
+    wrap.style.visibility = '';
+    if (!layer.isConnected) return applyAlbumState(true);   // het omslaan was al voorbij
+    // de echte flippo's even weg; de momentopname laat ze zien tot het blad ligt
+    discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
+    anims.forEach((a) => a.play());
+    if (!manual) animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); }, 720);
+  };
+  if (wrap.style.visibility !== 'hidden') reveal();
+  else {
+    Promise.all([...wrap.querySelectorAll('img')].map((im) => im.decode().catch(() => {}))).then(reveal);
+    setTimeout(reveal, 400);
+  }
   return layer;
 }
 
