@@ -6,11 +6,11 @@ Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzam
 
 **Spelen: [flippos.bramdehart.nl](https://flippos.bramdehart.nl)** · Broncode: [github.com/bramdehart/flippos](https://github.com/bramdehart/flippos)
 
-![Drie mappen op tafel om uit te kiezen: Flippo's map 1, Flippo's map 2 en AH Diskeyz](docs/keuze.jpg)
+![De mappen liggen over elkaar op tafel; de gekozen map ligt bovenop](docs/keuze.jpg)
 
 ## Vier mappen
 
-Je begint bij de tafel met vier mappen. Tik er een aan en hij vliegt naar het midden en slaat open. Elke map bewaart zijn eigen verzameling.
+Je begint bij de tafel met vier mappen, die half over elkaar liggen. Schuif erdoorheen door te vegen, te scrollen of met de pijltjestoetsen; de map in het midden ligt bovenop. Tik hem aan en hij vliegt naar zijn plek op tafel en slaat open, waarna je losse flippo's stuiterend op tafel vallen. Elke map bewaart zijn eigen verzameling.
 
 - **Flippo's map 1 (1995)** – de originele flippo's uit de zakken Smiths-chips, nummer 1 tot en met 250.
 - **Flippo's map 2 (1996)** – het vervolg, nummer 251 tot en met 545.
@@ -19,25 +19,25 @@ Je begint bij de tafel met vier mappen. Tik er een aan en hij vliegt naar het mi
 
 ## Geen knoppen
 
-Alles doe je met wat er op tafel ligt. De eerste keer krijg je een korte uitleg; het vraagteken rechtsboven laat hem opnieuw zien.
+Alles doe je met wat er op tafel ligt. Linksonder ligt de zak waar nieuwe flippo's uit komen, rechtsonder een bezem om de tafel leeg te vegen, en linksboven een pijltje terug naar de mappen. De eerste keer krijg je een korte uitleg; het vraagteken rechtsboven laat hem opnieuw zien.
 
 ![De uitleg die je de eerste keer ziet](docs/uitleg.jpg)
 
 ## De originele flippo's
 
-De flippo-mappen zijn ringbanden met insteekbladen: twintig vakjes per blad, met achter elk vakje alvast het plaatje dat erin hoort. Laat je een flippo los boven zijn vakje, dan schuift hij van boven in het hoesje.
+De flippo-mappen zijn ringbanden met insteekbladen: twintig vakjes per blad, met achter elk vakje alvast het plaatje dat erin hoort. Laat je een flippo los boven zijn vakje, dan schuift hij van boven in het hoesje. Stop je hem er met de achterkant boven in, dan blijft hij zo zitten tot je erop tikt.
 
 ![Een opengeslagen flippo-map met insteekbladen](docs/flippomap.jpg)
 
 ### Bladeren
 
-Een bladzijde sla je zelf om: pak hem vast en sleep hem naar de andere kant. Het blad buigt mee en ritselt. Pak je een flippo vast, dan slaat de map vanzelf open op het goede blad.
+Een bladzijde sla je zelf om: pak hem vast en sleep hem naar de andere kant, of tik op het omgekrulde hoekje. Het blad draait om met de flippo's erin en ritselt. Laat je te vroeg los, dan valt het terug. Pak je een flippo vast, dan slaat de map vanzelf open op het goede blad.
 
 ![Een bladzijde halverwege het omslaan](docs/omslaan.jpg)
 
 ### Zak chips
 
-Je begint met een lege map. Linksonder ligt een zak chips: tik erop, knijp in het midden en de onderkant scheurt open. De chips vallen eruit, samen met vijf flippo's, en meestal zit er een nieuwe tussen.
+Je begint met een lege map. Linksonder ligt een zak chips: tik erop en hij schuift naar het midden. Knijp in het midden en de onderkant scheurt open. De chips vallen eruit, samen met vijf flippo's, waarvan er af en toe een op zijn kop landt. Meestal zit er een nieuwe tussen. Tik ernaast als je de zak toch dicht wilt laten.
 
 ![Een zak Smiths-chips die net is opengepopt](docs/chips.jpg)
 
@@ -63,25 +63,29 @@ Ook hier begin je met een lege map. Diskeyz komen uit een zakje dat je aan de bo
 
 ## Pokémon-munten
 
-Een kleinere, rode map met twaalf munten per bladzijde. De munten zijn een slag groter dan flippo's, hebben een bolle glans en een zilveren achterkant die flink glimt als je ze omdraait. Ze komen uit een zakje van drie.
+Een kleinere, rode map met twaalf munten per bladzijde. De munten zijn een slag groter dan flippo's en hebben een bolle glans. Ze komen uit het Super de Boer-zakje, drie per keer, en vallen geregeld op hun kop.
 
 ![De Pokémon-muntenmap met munten op tafel](docs/pokemon.jpg)
 
+De achterkant is van zilver en glimt flink. Houd een munt vast om hem groot te bekijken en rond te draaien.
+
+![De zilveren achterkant van een Pokémon-munt](docs/munt.jpg)
+
 ## De map dichtdoen en omdraaien
 
-Sleep op de eerste bladzijde het linkerblad naar rechts en de kaft slaat dicht. Je verzameling blijft veilig binnenin zitten. De dichte map sleep je weer open, of je sleept de andere kant op om hem om te draaien.
+Sleep op de eerste bladzijde het linkerblad naar rechts en de kaft slaat dicht, met alles wat erin zit. De dichte map heeft dikte, zoals een echte. Sleep hem weer open, of sleep de andere kant op om hem om te draaien.
 
 ![Een dichte flippo-map die omdraait](docs/kaft.jpg)
 
 ## Ook op je telefoon
 
-Op een telefoon zie je één bladzijde tegelijk, zodat alles groot genoeg blijft voor je vingers. Met twee vingers zoom je in op de tafel.
+Op een telefoon zie je één bladzijde tegelijk, zodat alles groot genoeg blijft voor je vingers. Mikken hoeft niet: laat een flippo ergens op de map los en hij schuift in zijn eigen vakje. Met twee vingers zoom je in op de tafel. Via het deelmenu van je browser zet je de site als app op je beginscherm.
 
 <img src="docs/mobiel.jpg" alt="Een flippo-map op een telefoon, met één bladzijde in beeld" width="300">
 
 ## De reclame
 
-Er is ook een reclamespot van 80 seconden in de stijl van een speelgoedreclame uit de jaren negentig, helemaal in JavaScript: [flippos.bramdehart.nl/commercial](https://flippos.bramdehart.nl/commercial/). Zet je geluid aan.
+Er is ook een reclamespot van 80 seconden in de stijl van een speelgoedreclame uit de jaren negentig, helemaal in JavaScript: [flippos.bramdehart.nl/commercial](https://flippos.bramdehart.nl/commercial/). Zet je geluid aan. Hij staat ook als video in de repo: [flippos-reclame.mp4](commercial/flippos-reclame.mp4).
 
 ## Alles wat je kunt doen
 
@@ -93,11 +97,13 @@ Er is ook een reclamespot van 80 seconden in de stijl van een speelgoedreclame u
 | Twee flippo's met gleufjes tegen elkaar slepen | Ze klikken vast |
 | Dubbeltikken op een flippo | Losmaken uit een bouwwerk |
 | Scrollen boven een flippo | Flippo of bouwwerk draaien |
-| Een bladzijde opzij slepen | Bladzijde omslaan |
+| Een bladzijde opzij slepen, of op het hoekje tikken | Bladzijde omslaan |
 | De kaft opzij slepen | Map dichtslaan, openslaan of omdraaien |
-| Tikken op het zakje of de zak chips | Nieuwe flippo's openmaken |
+| Tikken op het zakje of de zak chips | Nieuwe flippo's openmaken; ernaast tikken legt hem terug |
 | Tikken op het pijltje linksboven | Terug naar het overzicht met de mappen |
 | Twee keer tikken op de bezem | Alle losse flippo's van tafel vegen; de map blijft |
 | Knijpen, of ctrl + scrollen | In- en uitzoomen |
+| Pijltjestoetsen | Bladeren, of door de mappen schuiven |
+| Escape | Uitleg, zak of grote weergave sluiten |
 
 Je spel wordt vanzelf bewaard in je browser.
