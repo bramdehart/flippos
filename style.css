@@ -1208,3 +1208,5 @@ body.intro .obj { transition: none; }
 }
 
 .disclaimer a { color: #143a75; font-weight: 700; white-space: nowrap; }
+
+.bc-year { font-size: calc(var(--u) * 40); font-weight: 800; opacity: .7; }

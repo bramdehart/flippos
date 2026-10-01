@@ -103,7 +103,8 @@ function flash(root, o = .85) { const f = mk(root, 'flash'); A(f, [{ opacity: o 
 // dichte map
 function book(root, cover, w, x, y, cls = '') {
   const h = w * 1.475;
-  const b = mk(root, 'book ' + cls, `width:${w}px;height:${h}px;left:${x - w / 2}px;top:${y - h / 2}px`);
+  // de rug in pixels: een percentage zou van de breedte van het hele beeld uitgaan
+  const b = mk(root, 'book ' + cls, `width:${w}px;height:${h}px;left:${x - w / 2}px;top:${y - h / 2}px;padding-left:${w * .05}px`);
   img(b, cover);
   return b;
 }

@@ -12,9 +12,9 @@ Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzam
 
 Je begint bij de tafel met drie mappen. Tik er een aan en hij vliegt naar het midden en slaat open. Elke map bewaart zijn eigen verzameling.
 
-- **Flippo's map 1** – de originele flippo's uit de zakken Smiths-chips, nummer 1 tot en met 250.
-- **Flippo's map 2** – het vervolg, nummer 251 tot en met 545.
-- **AH Diskeyz** – de 30 Diskeyz van Albert Heijn.
+- **Flippo's map 1 (1995)** – de originele flippo's uit de zakken Smiths-chips, nummer 1 tot en met 250.
+- **Flippo's map 2 (1996)** – het vervolg, nummer 251 tot en met 545.
+- **AH Diskeyz (2026)** – de 30 Diskeyz van Albert Heijn.
 
 ## Geen knoppen
 
@@ -71,6 +71,10 @@ Sleep op de eerste bladzijde het linkerblad naar rechts en de kaft slaat dicht. 
 Op een telefoon zie je één bladzijde tegelijk, zodat alles groot genoeg blijft voor je vingers. Met twee vingers zoom je in op de tafel.
 
 <img src="docs/mobiel.jpg" alt="Een flippo-map op een telefoon, met één bladzijde in beeld" width="300">
+
+## De reclame
+
+Er is ook een reclamespot van 80 seconden in de stijl van een speelgoedreclame uit de jaren negentig, helemaal in JavaScript: [flippos.bramdehart.nl/commercial](https://flippos.bramdehart.nl/commercial/). Zet je geluid aan.
 
 ## Alles wat je kunt doen
 

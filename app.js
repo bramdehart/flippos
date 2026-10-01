@@ -20,9 +20,9 @@ const COLORS = ['#c4215d', '#e8702a', '#eeb02c', '#1f7a4d', '#1e5fc4', '#4b2a9b'
 
 // ---------- de drie mappen ----------
 const SETS = {
-  flippo1: { title: "Flippo's map 1", kind: 'flippo', from: 1, to: 250, store: 'flippo-state-f1', dir: 'img/flippo-1', cover: 'img/flippo-1/cover.jpg', pack: 'img/flippo-1/chips.jpg', packRatio: 0.6 },
-  flippo2: { title: "Flippo's map 2", kind: 'flippo', from: 251, to: 545, store: 'flippo-state-f2', dir: 'img/flippo-2', cover: 'img/flippo-2/cover.jpg', pack: 'img/flippo-2/chips.jpg', packRatio: 0.6 },
-  diskeyz: { title: 'AH Diskeyz', kind: 'diskeyz', from: 1, to: 30, store: 'flippo-state-v1', dir: 'img/diskeyz', cover: 'img/diskeyz/cover.jpg', pack: 'img/diskeyz/pack.jpg', packRatio: 420 / 638 },
+  flippo1: { title: "Flippo's map 1", year: '1995', kind: 'flippo', from: 1, to: 250, store: 'flippo-state-f1', dir: 'img/flippo-1', cover: 'img/flippo-1/cover.jpg', pack: 'img/flippo-1/chips.jpg', packRatio: 0.6 },
+  flippo2: { title: "Flippo's map 2", year: '1996', kind: 'flippo', from: 251, to: 545, store: 'flippo-state-f2', dir: 'img/flippo-2', cover: 'img/flippo-2/cover.jpg', pack: 'img/flippo-2/chips.jpg', packRatio: 0.6 },
+  diskeyz: { title: 'AH Diskeyz', year: '2026', kind: 'diskeyz', from: 1, to: 30, store: 'flippo-state-v1', dir: 'img/diskeyz', cover: 'img/diskeyz/cover.jpg', pack: 'img/diskeyz/pack.jpg', packRatio: 420 / 638 },
 };
 const SET = SETS[location.hash.slice(1)] || null;   // geen keuze = eerst het overzicht
 const FLIPPO = !!SET && SET.kind === 'flippo';       // ronde flippo's zonder gleufjes
@@ -395,7 +395,7 @@ function buildAlbum() {
     leaf.className = 'leaf ' + (p ? 'right' : 'left');
     leaf.appendChild(page);
     leaf.insertAdjacentHTML('beforeend', p
-      ? `<div class="cover backcover"><div class="bc-logo">${FLIPPO ? "Flippo's" : 'Diskeyz'}</div><div class="bc-text">Spaar ze allemaal!</div><div class="bc-count"></div></div>`
+      ? `<div class="cover backcover"><div class="bc-logo">${FLIPPO ? "Flippo's" : 'Diskeyz'}</div><div class="bc-text">Spaar ze allemaal!</div><div class="bc-year">${SET.year}</div><div class="bc-count"></div></div>`
       : `<div class="cover frontcover" style="background-image:url(${SET.cover})"></div>`);
     album.appendChild(leaf);
   }
@@ -1397,7 +1397,7 @@ function showChooser() {
     const card = document.createElement('button');
     card.className = 'ch-card';
     card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt=""></div><b>${set.title}</b>` +
-      `<span>${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : '30 Diskeyz'}</span>` +
+      `<span>${set.year} · ${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : '30 Diskeyz'}</span>` +
       `<u><i style="width:${Math.round(n / total * 100)}%"></i></u>` +
       `<em>${n} / ${total} in de map</em>`;
     card.dataset.key = key;
