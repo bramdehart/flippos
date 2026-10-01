@@ -604,3 +604,11 @@ body {
 .album.closed .leaf.left .page > * { transition-delay: .35s; }
 .album.closed .leaf.right .page > * { transition-delay: .65s; }
 .album.single .page > * { transition-delay: 0s !important; }
+
+/* Eén-pagina-weergave (telefoon): de dichte map gebruikt geen omgeklapt 3D-blad meer.
+   De pagina zelf gaat weg en de kaft ligt gewoon plat, zodat geen enkele browser
+   de achterkant van de pagina door de kaft heen kan tekenen. */
+.album.single.closed .leaf.left,
+.album.single.closed.turned .leaf.right { transform: none; }
+.album.single.closed .page { display: none; }
+.album.single.closed .cover { transform: none; }
