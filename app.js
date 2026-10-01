@@ -1491,7 +1491,7 @@ window.addEventListener('keydown', (e) => {
 if (!SET) {
   showChooser();
 } else {
-  document.title = SET.title;
+  document.title = `${SET.title} – Flippo's`;
   // voorwerpen op tafel in plaats van knoppen
   const pk = $('#btn-pack');
   pk.hidden = false;
