@@ -1536,3 +1536,8 @@ html, body { -webkit-touch-callout: none; }
 .album.single.opening.p1[data-from="front"] .leaf.left { display: block; animation: coveraway .3s ease-in forwards; }
 .album.single.opening.p1[data-from="front"] .leaf.right { animation: coverin .34s ease-out .3s backwards; }
 @keyframes coveraway { from { transform: rotateY(180deg); } to { transform: rotateY(90deg); } }
+
+/* Safari: elke bladzijde is één eigen laag. Zonder dit maakt WebKit van elk vakje een aparte laag
+   (door de z-index boven het 3D-blad) en die worden na het omslaan pas na ~0,3 s opnieuw getekend:
+   de bladzijde stond dan even leeg. */
+.leaf > .page { transform: translateZ(0); isolation: isolate; }
