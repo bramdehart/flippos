@@ -1210,3 +1210,59 @@ body.intro .obj { transition: none; }
 .disclaimer a { color: #143a75; font-weight: 700; white-space: nowrap; }
 
 .bc-year { font-size: calc(var(--u) * 40); font-weight: 800; opacity: .7; }
+
+/* ---------- overzicht op telefoon: van links naar rechts door de mappen vegen ---------- */
+.ch-dots { display: none; }
+@media (max-width: 640px) {
+  #chooser { justify-content: center; gap: 14px; padding: 16px 0; }
+  .ch-list {
+    display: flex;
+    grid-template-columns: none;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    padding: 34px 16vw 16px;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+  }
+  .ch-list::-webkit-scrollbar { display: none; }
+  .ch-card, .ch-card:nth-child(3) {
+    flex: 0 0 68vw;
+    width: 68vw;
+    max-width: 320px;
+    padding: 0 5vw;
+    scroll-snap-align: center;
+    grid-column: auto;
+  }
+  .ch-card b { font-size: 19px; }
+  .ch-card span, .ch-card em { font-size: 14px; }
+  .ch-dots { display: flex; gap: 9px; position: relative; z-index: 1; transition: opacity .4s; }
+  .ch-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(0, 0, 0, .22); transition: background .2s, transform .2s; }
+  .ch-dots i.on { background: #111; transform: scale(1.35); }
+  #chooser.fadeout .ch-dots { opacity: 0; }
+}
+
+/* het overzicht mag alleen omhoog en omlaag schuiven; opzij vegen is voor de lijst met mappen */
+#chooser { overflow-x: hidden; overflow-y: auto; overscroll-behavior: none; }
+@supports (overflow: clip) { #chooser { overflow-x: clip; } html, body { overflow-x: clip; } }
+html, body { overflow-x: hidden; max-width: 100%; }
+
+/* losse flippo's in een eigen laag, zodat ze het overzicht niet breder maken dan het scherm */
+.ch-decos { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+/* disclaimer in het overzicht: op een telefoon vrij van de schermranden */
+@media (max-width: 640px) {
+  #chooser .disclaimer { width: auto; max-width: none; margin: 0 16px; align-self: stretch; }
+}
+
+/* één bladzijde in beeld en je zit op een rechterbladzijde: die draait eerst weg, dan zwaait de kaft erin.
+   Zonder dit stond de kaft er ineens, omdat het linkerblad daar verborgen was. */
+.album.single.closing.p1 .leaf.right { display: block; animation: pageaway .3s ease-in forwards; }
+.album.single.closing.p1 .leaf.right .page > * { visibility: visible; }
+.album.single.closing.p1:not(.turned) .leaf.left { animation: coverin .34s ease-out .3s backwards; }
+@keyframes pageaway { to { transform: rotateY(-90deg); } }
+@keyframes coverin { from { transform: rotateY(90deg); } }

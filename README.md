@@ -56,7 +56,7 @@ Elke Diskey heeft acht gleufjes, dus je kunt ze allemaal in elkaar klikken.
 
 ![Een bouwwerk van Diskeyz, in 3D gedraaid](docs/3d.jpg)
 
-Nieuwe Diskeyz komen uit een zakje dat je aan de bovenkant openscheurt. Er vallen er drie uit.
+Ook hier begin je met een lege map. Diskeyz komen uit een zakje dat je aan de bovenkant openscheurt. Er vallen er drie uit, en meestal zit er een nieuwe tussen.
 
 ![Een half opengescheurd zakje Diskeyz](docs/zakje.jpg)
 
