@@ -1,5 +1,7 @@
 # Flippo's
 
+> Gemaakt voor mijn neefjes, met foto's van eigen map en flippo's. Dit is geen officieel product: Diskeyz is een spaaractie van Albert Heijn, en de figuren zijn van Disney en Pixar.
+
 Een speeltafel vol flippo's in je browser. Verzamel ze in de map, klik ze in elkaar tot een bouwwerk en scheur zelf een nieuw zakje open.
 
 ![De map ligt open op tafel, met losse flippo's eromheen](docs/map.jpg)
@@ -46,7 +48,3 @@ Ga naar [flippos.bramdehart.nl](https://flippos.bramdehart.nl). Je spel wordt va
 | Dubbeltikken | Flippo losmaken uit een bouwwerk |
 | Scrollen boven een flippo | Flippo of bouwwerk draaien |
 | Knijpen, of ctrl + scrollen | In- en uitzoomen |
-
----
-
-Gemaakt voor mijn neefjes, met foto's van eigen map en flippo's. Dit is geen officieel product: Diskeyz is een spaaractie van Albert Heijn, en de figuren zijn van Disney en Pixar.
