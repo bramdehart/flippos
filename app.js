@@ -47,6 +47,7 @@ const DECOR = [
   [['🥝', 770, 280, 150, 10], ['🥦', 130, 620, 170, -10], ['🥬', 760, 1010, 190, 25]],
 ];
 const PAGE_W = 880, SPINE = 40, DISC_R = 93;
+const BOOK_T = 44;                       // dikte van de dichte map, in map-eenheden
 const SLIT_DEPTH = 0.2;                  // deel van de straal
 const LINK = 2 - 2 * SLIT_DEPTH + 0.04;  // afstand tussen twee vastgeklikte flippo's (in stralen)
 const MAX_DISCS = 60;
@@ -133,7 +134,7 @@ function computeLayout() {
   const vw = table.clientWidth, vh = table.clientHeight;
   const portrait = vw / vh < 1.05;
   const l = portrait
-    ? { mode: 'p', W: 1000, H: Math.max(1500, Math.round(1000 * vh / vw)), ax: (1000 - PAGE_W * 0.78) / 2, ay: 18, u: 0.78, single: true }
+    ? { mode: 'p', W: 1000, H: Math.max(1500, Math.round(1000 * vh / vw)), ax: (1000 - PAGE_W * 0.78) / 2, ay: 150, u: 0.78, single: true }
     : { mode: 'l', W: 1600, H: 1000, ax: 350, ay: 22, u: 0.5 };
   l.R = DISC_R * l.u;
   l.aw = (l.single ? PAGE_W : PAGE_W * 2 + SPINE) * l.u;
@@ -196,7 +197,96 @@ let bgTap = 0;
 table.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.disc, .pack')) return;
   bgPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+  // op een bladzijde gepakt: misschien wordt dit omslaan
+  if (view.z === 1 && bgPointers.size === 1 && !pageDrag && e.target.closest('.album')) {
+    const r = albumEl.getBoundingClientRect();
+    pageDrag = { id: e.pointerId, sx: e.clientX, right: e.clientX > r.left + r.width / 2, turn: null, prog: 0 };
+  }
 });
+
+// ---------- bladzijde vastpakken en zelf omslaan ----------
+let pageDrag = null, noClickUntil = 0;
+const TURN_MS = 700;
+
+// de dichte map openslaan: van voren op de eerste bladzijden, van achteren op de laatste
+function openAlbumFrom(state) {
+  const p = state === 'back' ? PAGES.length - 1 - (L.single ? 0 : 1) : 0;
+  if (p !== curPage) { curPage = p; buildAlbum(); void albumEl.offsetWidth; }
+  setAlbum('open');
+}
+
+// kaft dichtslaan, openslaan of de dichte map omdraaien met een sleepbeweging
+function coverGesture(dx) {
+  if (Math.abs(dx) < 40) return false;
+  const left = dx < 0;
+  if (albumState === 'front') { if (left) openAlbumFrom('front'); else setAlbum('back'); }
+  else if (albumState === 'back') { if (left) setAlbum('front'); else openAlbumFrom('back'); }
+  else setAlbum(left ? 'back' : 'front');      // open: voorbij de laatste of eerste bladzijde = dicht
+  if (albumState !== 'open' && !coverGesture.told) {
+    coverGesture.told = true;
+    toast('Sleep de kaft open, of sleep de andere kant op om de map om te draaien');
+  }
+  noClickUntil = performance.now() + 400;
+  pageDrag = null;
+  return true;
+}
+
+function pageDragMove(e) {
+  const pd = pageDrag;
+  if (!pd || pd.id !== e.pointerId) return;
+  const dx = e.clientX - pd.sx;
+  if (!pd.turn) {
+    if (Math.abs(dx) < 8) return;
+    if (albumState !== 'open') { coverGesture(dx); return; }
+    // rechterblad trek je naar links (vooruit), linkerblad naar rechts (terug); met één blad in beeld telt alleen de richting
+    const dir = dx < 0 ? 1 : -1;
+    if (!L.single && (dir === 1) !== pd.right) { pageDrag = null; return; }
+    // geen bladzijde meer die kant op: dan sla je de kaft dicht
+    const next = curPage + dir * (L.single ? 1 : 2);
+    if (next < 0 || next >= PAGES.length) { coverGesture(dx); return; }
+    pd.turn = beginTurn(dir);
+    if (!pd.turn) { pageDrag = null; return; }
+    pd.dir = dir;
+    pd.anims = pd.turn.layer.getAnimations({ subtree: true });
+    pd.anims.forEach((a) => a.pause());
+  }
+  const span = PAGE_W * L.u * L.k * (L.single ? 0.9 : 1.7);
+  pd.prog = Math.max(0, Math.min(0.98, (pd.dir === 1 ? -dx : dx) / span));
+  pd.anims.forEach((a) => { a.currentTime = pd.prog * TURN_MS; });
+}
+
+function pageDragEnd(e) {
+  const pd = pageDrag;
+  if (!pd || pd.id !== e.pointerId) return;
+  pageDrag = null;
+  if (!pd.turn) return;
+  const { layer, old, same } = pd.turn;
+  if (pd.prog > 0.28) {
+    // ver genoeg: het blad valt vanzelf verder om
+    pd.anims.forEach((a) => a.play());
+    snd('page');
+    animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); save(); }, TURN_MS * (1 - pd.prog) + 30);
+  } else {
+    // losgelaten voor het midden: het blad valt terug
+    pd.anims.forEach((a) => { a.playbackRate = -1; a.play(); });
+    animateTurn.t = setTimeout(() => {
+      layer.remove();
+      curPage = old;
+      if (same) applyAlbumState(true); else buildAlbum();
+    }, TURN_MS * pd.prog + 30);
+  }
+}
+
+// zet de map alvast op de nieuwe bladzijden en legt het omslaande blad klaar (stilstaand)
+function beginTurn(dir) {
+  let p = curPage + dir * (L.single ? 1 : 2);
+  if (p < 0 || p >= PAGES.length || albumEl.querySelector('.turnlayer')) return null;
+  const old = curPage, oldSnap = snapPages();
+  const same = p - (p % 2) === old - (old % 2);
+  curPage = p;
+  if (same) applyAlbumState(true); else buildAlbum();
+  return { old, same, layer: animateTurn(old, p, oldSnap, true) };
+}
 window.addEventListener('pointermove', (e) => {
   const p = bgPointers.get(e.pointerId);
   if (!p) return;
@@ -210,6 +300,7 @@ window.addEventListener('pointermove', (e) => {
     view.y += (a.y + b.y) / 2 - my0;
     zoomAt(d1 / d0, (a.x + b.x) / 2, (a.y + b.y) / 2);
   } else {
+    pageDragMove(e);
     if (view.z > 1) { view.x += e.clientX - p.x; view.y += e.clientY - p.y; applyView(); }
     p.x = e.clientX; p.y = e.clientY;
   }
@@ -218,10 +309,7 @@ const bgUp = (e) => {
   const p = bgPointers.get(e.pointerId);
   if (!p) return;
   bgPointers.delete(e.pointerId);
-  // vegen over de map = bladeren
-  const sdx = e.clientX - p.sx, sdy = e.clientY - p.sy;
-  if (view.z === 1 && !bgPointers.size && e.target.closest?.('.album') &&
-      Math.abs(sdx) > 45 && Math.abs(sdx) > Math.abs(sdy) * 1.5) turnPage(sdx < 0 ? 1 : -1);
+  pageDragEnd(e);
   // dubbeltik op de tafel = zoom terugzetten
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 8 && !e.target.closest('.album')) {
     const now = performance.now();
@@ -247,7 +335,7 @@ function buildAlbum() {
   const album = document.createElement('div');
   album.className = 'album' + (FLIPPO ? ' binder' : '');
   album.style.setProperty('--inside', `url(${SET.dir}/inside.jpg)`);
-  album.addEventListener('click', () => { if (albumState !== 'open') setAlbum(albumState === 'back' ? 'front' : 'open'); });
+  album.addEventListener('click', () => { if (albumState !== 'open' && performance.now() > noClickUntil) openAlbumFrom(albumState); });
   wrap.appendChild(album);
   albumEl = album;
   // plek van álle vakjes, ook op bladzijden die nu niet open liggen
@@ -311,14 +399,12 @@ function buildAlbum() {
       : `<div class="cover frontcover" style="background-image:url(${SET.cover})"></div>`);
     album.appendChild(leaf);
   }
-  // bladerknoppen
-  for (const dir of [-1, 1]) {
-    const pg = document.createElement('button');
-    pg.className = 'pgbtn ' + (dir < 0 ? 'prev' : 'next');
-    pg.textContent = dir < 0 ? '‹' : '›';
-    pg.addEventListener('click', () => turnPage(dir));
-    wrap.appendChild(pg);
-  }
+  // omgekrulde hoekjes: hier pak je het blad vast om om te slaan
+  album.insertAdjacentHTML('beforeend', '<div class="curl prev"></div><div class="curl next"></div>');
+  // dikte van de dichte map: een stapel laagjes (het pak bladzijden) tussen achter- en voorkaft
+  let slabs = '';
+  for (let z = 1.5; z < BOOK_T * L.u; z += 1.5) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
+  album.insertAdjacentHTML('beforeend', slabs);
   stage.prepend(wrap);
   applyAlbumState(true);
   updateCount();
@@ -450,6 +536,10 @@ function tableSpot() {
     const y = L.R * 1.1 + Math.random() * (L.H - L.R * 2.2);
     const m = L.R * 1.15;
     if (x > L.ax - m && x < L.ax + L.aw + m && y > L.ay - m && y < L.ay + L.ah + m) continue;
+    // niet onder de voorwerpen in de hoeken van het scherm (zakje, stapeltje mappen, knopjes)
+    const sr = stage.getBoundingClientRect(), tr = table.getBoundingClientRect();
+    const px = sr.left + x * K() - tr.left, py = sr.top + y * K() - tr.top, rr = L.R * K();
+    if ((px - rr < 150 && py + rr > tr.height - 190) || (px - rr < 110 && py - rr < 120) || (px + rr > tr.width - 120 && py - rr < 70)) continue;
     let near = Infinity;
     for (const d of discs) if (d.slot == null) near = Math.min(near, Math.hypot(d.x - x, d.y - y));
     if (near > L.R * 2.1) return { x, y };
@@ -471,8 +561,8 @@ function applyAlbumState(instant) {
   albumEl.classList.toggle('p0', curPage % 2 === 0);
   albumEl.classList.toggle('p1', curPage % 2 === 1);
   const step = L.single ? 1 : 2;
-  albumEl.parentNode.querySelector('.pgbtn.prev').hidden = !open || curPage - step < 0;
-  albumEl.parentNode.querySelector('.pgbtn.next').hidden = !open || curPage + step >= PAGES.length;
+  albumEl.querySelector('.curl.prev').hidden = !open || curPage - step < 0;
+  albumEl.querySelector('.curl.next').hidden = !open || curPage + step >= PAGES.length;
   // flippo's in vakjes die je niet ziet zijn verstopt; ze komen pas terug als het blad ligt
   clearTimeout(applyAlbumState.t);
   const set = () => discs.forEach((d) => d.el.classList.toggle('stowed', d.slot != null && !slotOpen(d.slot)));
@@ -481,10 +571,6 @@ function applyAlbumState(instant) {
     discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
     applyAlbumState.t = setTimeout(set, open ? 550 : 0);
   }
-  const btn = $('#btn-close');
-  btn.firstChild.textContent = open ? '📕 ' : '📖 ';
-  btn.querySelector('span').textContent = open ? 'Map dichtklappen' : 'Map openklappen';
-  btn.dataset.short = open ? 'Dicht' : 'Open';
 }
 
 function setPage(p) {
@@ -492,13 +578,75 @@ function setPage(p) {
   p = Math.max(0, Math.min(PAGES.length - 1, p));
   if (!L.single) p -= p % 2;
   if (p === curPage) return;
-  const sameSpread = p - (p % 2) === curPage - (curPage % 2);
+  const old = curPage, oldSnap = snapPages();
+  const sameSpread = p - (p % 2) === old - (old % 2);
   curPage = p;
-  if (sameSpread) applyAlbumState(false);
-  else { buildAlbum(); albumEl.classList.add('turnpage'); }   // andere bladen: opnieuw opbouwen
-  snd('flip');
+  if (sameSpread) applyAlbumState(true);
+  else buildAlbum();                       // andere bladen: opnieuw opbouwen
+  animateTurn(old, p, oldSnap);
+  snd('page');
   save();
 }
+
+// ---------- bladzijde omslaan ----------
+// Momentopname van de bladzijden die nu in de map zitten (met de flippo's die erin zitten),
+// als html per bladzijdenummer. Daarmee tekenen we het blad dat omslaat.
+function snapPages() {
+  const base = curPage - (curPage % 2), out = {};
+  albumEl.querySelectorAll('.page').forEach((el, k) => {
+    const pi = base + k;
+    let html = el.outerHTML.replace(/<img /g, '<img decoding="sync" ');
+    for (const sl of PAGES[pi].slots || []) {
+      if (slots[sl.id].uid == null) continue;
+      html += `<img class="ghost" decoding="sync" src="${imgOf(sl.id)}" alt="" style="left:calc(var(--u)*${sl.x - DISC_R});top:calc(var(--u)*${sl.y - DISC_R})">`;
+    }
+    out[pi] = html;
+  });
+  return out;
+}
+
+function animateTurn(from, to, oldSnap, manual) {
+  const W = PAGE_W * L.u, H = 1300 * L.u, fwd = to > from, N = 6, segW = W / N;
+  const newSnap = snapPages();
+  clearTimeout(animateTurn.t);
+  albumEl.querySelector('.turnlayer')?.remove();
+  const clone = (html, off) => `<div class="pgclone" style="left:${-off}px;width:${W}px;height:${H}px">${html}</div>`;
+  const flat = (html, x) => `<div class="tstatic" style="left:${x}px;width:${W}px;height:${H}px">${clone(html, 0)}</div>`;
+  // het omslaande blad bestaat uit stroken die elk een beetje extra buigen: zo krijgt het blad een boog
+  const hinge = fwd || L.single;   // scharniert het blad om zijn linkerrand?
+  const strips = (front, back, i = 0) => {
+    if (i === N) return '';
+    const near = i * segW, far = W - (i + 1) * segW;      // afstand tot de rug
+    const pos = i === 0 ? (hinge ? 0 : W - segW) : (hinge ? segW : -segW);
+    return `<div class="tseg" style="left:${pos}px;width:${segW + 0.6}px;height:${H}px;transform-origin:${hinge ? 0 : 100}% 50%">` +
+      `<div class="tf">${clone(front, hinge ? near : far)}</div>` +
+      (back ? `<div class="tf tback">${clone(back, hinge ? far : near)}</div>` : '') +
+      strips(front, back, i + 1) + `</div>`;
+  };
+  const layer = document.createElement('div');
+  layer.className = 'turnlayer ' + (fwd ? 'fwd' : 'bwd');
+  const rightX = W + SPINE * L.u;
+  layer.style.setProperty('--gap', SPINE * L.u + 'px');
+  if (L.single) {
+    // één bladzijde in beeld: het blad draait weg over de linkerrand (of komt daarvandaan terug)
+    layer.classList.add('one');
+    layer.innerHTML = fwd
+      ? `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[from], '')}</div>`
+      : flat(oldSnap[from], 0) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(newSnap[to], '')}</div>`;
+  } else {
+    const ob = from - (from % 2), nb = to - (to % 2);
+    layer.innerHTML = fwd
+      ? flat(newSnap[nb + 1], rightX) + flat(oldSnap[ob], 0) + `<div class="turner" style="left:${rightX}px;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[ob + 1], newSnap[nb])}</div>`
+      : flat(newSnap[nb], 0) + flat(oldSnap[ob + 1], rightX) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:100% 50%">${strips(oldSnap[ob], newSnap[nb + 1])}</div>`;
+  }
+  albumEl.appendChild(layer);
+  // de echte flippo's even weg; de momentopname laat ze zien tot het blad ligt
+  discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
+  if (manual) return layer;       // het blad wordt met de hand bewogen
+  animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); }, 720);
+  return layer;
+}
+
 const turnPage = (dir) => setPage(curPage + dir * (L.single ? 1 : 2));
 
 function setAlbum(state) {
@@ -550,7 +698,6 @@ function leaveSlot(d) {
 
 function updateCount() {
   const n = discs.filter((d) => d.slot != null).length, total = IDS.length;
-  $('#count').textContent = `${n} / ${total} in de map`;
   const bc = document.querySelector('.bc-count');
   if (bc) bc.textContent = `${n} / ${total}`;
   if (n === total && updateCount.last != null && updateCount.last !== total) toast('🎉 De map is compleet!');
@@ -609,7 +756,6 @@ function tryConnect(group) {
     group.forEach(render);
     pop(a); pop(o);
     lastBuilt = a.uid;
-    $('#btn-3d').classList.add('ready');
     snd('snap');
     return true;
   }
@@ -635,6 +781,16 @@ function onDown(e, d) {
     offs: group.map((g) => ({ g, dx: g.x - p.x, dy: g.y - p.y })),
   };
   if (d.links.length) lastBuilt = d.uid;
+  // ingedrukt houden zonder te bewegen = deze flippo in het groot bekijken
+  drag.hold = setTimeout(() => {
+    if (!drag || drag.d !== d || drag.moved) return;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    drag = null;
+    if (d.links.length && d.slot == null) { lastBuilt = d.uid; open3d(); }   // zit hij in een bouwwerk: het hele bouwwerk
+    else open3d(d);
+  }, 480);
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
@@ -646,6 +802,7 @@ function onMove(e) {
   if (!drag.moved) {
     if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
     drag.moved = true;
+    clearTimeout(drag.hold);
     leaveSlot(d);
     toFront(group);
     if (e.pointerType === 'touch') for (const o of drag.offs) o.dy -= Math.min(L.R * 0.9, 40 / K());
@@ -665,6 +822,7 @@ function onUp(e) {
   window.removeEventListener('pointerup', onUp);
   window.removeEventListener('pointercancel', onUp);
   const { d, group, moved } = drag;
+  clearTimeout(drag.hold);
   drag = null;
 
   if (!moved) {
@@ -737,77 +895,19 @@ window.addEventListener('pointermove', (e) => {
 });
 
 // ---------- knoppen ----------
-$('#btn-album').onclick = () => {
-  if (albumState !== 'open') setAlbum('open');
-  let i = albumState === 'open' ? 0 : 0;
-  const wait = discs.some((d) => d.el.classList.contains('stowed')) ? 700 : 0;
-  for (const id of IDS) {
-    if (slots[id].uid != null) continue;
-    const d = discs.find((x) => x.id === id && x.slot == null);
-    if (!d) continue;
-    setTimeout(() => {
-      if (d.slot != null || slots[id].uid != null) return;
-      detach(d);
-      putInSlot(d, true);
-      snd('slot');
-      save();
-    }, wait + i++ * 45);
-  }
-  if (!i) toast('Alles zit al in de map');
-};
-
-$('#btn-close').onclick = () => setAlbum(albumState === 'open' ? 'front' : 'open');
-$('#btn-turn').onclick = () => {
-  if (albumState === 'open') return toast('Klap de map eerst dicht');
-  setAlbum(albumState === 'front' ? 'back' : 'front');
-};
-
-$('#btn-table').onclick = () => {
-  if (albumState !== 'open') setAlbum('open');
-  const list = discs.filter((d) => d.slot != null && pageVisible(slots[d.slot].page));
-  if (!list.length) return toast(PAGES.length > 2 ? 'Deze bladzijden zijn al leeg' : 'De map is al leeg');
-  list.forEach((d) => d.el.classList.remove('stowed'));
-  for (const d of list) {
-    leaveSlot(d);
-    Object.assign(d, tableSpot(), { rot: Math.round(Math.random() * 60 - 30) });
-    render(d);
-  }
-  animate(list, 400);
-  snd('put');
-  save();
-};
-
-$('#btn-loose').onclick = () => {
-  const linked = discs.filter((d) => d.links.length);
-  if (!linked.length) return toast('Er zit niets aan elkaar vast');
-  for (const d of linked) {
-    const g = groupOf(d);
-    d._cx = g.reduce((s, m) => s + m.x, 0) / g.length;
-    d._cy = g.reduce((s, m) => s + m.y, 0) / g.length;
-  }
-  for (const d of linked) {
-    d.links = [];
-    const dx = d.x - d._cx, dy = d.y - d._cy, len = Math.hypot(dx, dy) || 1;
-    d.x += dx / len * L.R * 0.6; d.y += dy / len * L.R * 0.6;
-    clamp(d);
-    render(d);
-  }
-  animate(linked);
-  snd('flip');
-  save();
-};
-
 // ---------- zakje openscheuren ----------
 let pack = null;
 const PACK_N = FLIPPO ? 5 : 3;   // zoveel flippo's per zak
 
 $('#btn-pack').onclick = () => {
   if (pack) return;
+  $('#btn-pack').classList.remove('nudge');
   makeRoom(PACK_N);
   const big = L.mode === 'p';
   const h = (big ? 760 : 500) * (FLIPPO ? 1.3 : 1), w = h * SET.packRatio;   // de zak chips is groter dan het zakje
-  // rafelige rand bij de bovenste naad
-  const cutY = 13;
+  const cy = L.H * (FLIPPO ? 0.4 : 0.5);   // de zak chips hangt wat hoger, zodat eronder ruimte is voor de chips
+  // rafelige rand: het zakje bij de bovenste naad, de zak chips bij de onderste
+  const cutY = FLIPPO ? 88 : 13;
   const pts = [];
   for (let i = 0; i <= 14; i++) pts.push(`${(i / 14 * 100).toFixed(1)}% ${(cutY + (i % 2 ? 1.6 : -1.2) + Math.random() * 0.8).toFixed(1)}%`);
   const edge = pts.join(','), edgeRev = [...pts].reverse().join(',');
@@ -815,18 +915,18 @@ $('#btn-pack').onclick = () => {
   dim.className = 'packdim';
   const el = document.createElement('div');
   el.className = 'pack';
-  el.style.cssText = `width:${w}px;height:${h}px;left:${L.W / 2 - w / 2}px;top:${L.H / 2 - h / 2}px;--pk:url(${SET.pack})`;
+  el.style.cssText = `width:${w}px;height:${h}px;left:${L.W / 2 - w / 2}px;top:${cy - h / 2}px;--pk:url(${SET.pack})`;
   const hint = (a, b) => `<div class="pk-hint" style="--hs:${big ? 1.8 : 1}">${a}<br><small>${b}</small></div>`;
   if (FLIPPO) {
-    // bolle zak chips: je duwt tegen de onderkant, de bovenste naad popt in twee flapjes open
+    // bolle zak chips: je knijpt in het midden, de onderste naad scheurt in twee flapjes open
     el.classList.add('puffy');
     el.innerHTML =
       `<div class="pk-wrap">` +
-      `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
-      `<div class="pk pk-flap l" style="clip-path:polygon(0 0,50% 0,${pts.slice(0, 8).reverse().join(',')})"></div>` +
-      `<div class="pk pk-flap r" style="clip-path:polygon(50% 0,100% 0,${pts.slice(7).reverse().join(',')})"></div>` +
+      `<div class="pk pk-body" style="clip-path:polygon(0 0,100% 0,${edgeRev})"></div>` +
+      `<div class="pk pk-flap l" style="clip-path:polygon(${pts.slice(0, 8).join(',')},50% 100%,0 100%)"></div>` +
+      `<div class="pk pk-flap r" style="clip-path:polygon(${pts.slice(7).join(',')},100% 100%,50% 100%)"></div>` +
       `</div>` +
-      hint('Pop de zak chips open!', 'duw tegen de onderkant ↑');
+      hint('Pop de zak chips open!', 'knijp in het midden van de zak');
   } else {
     el.innerHTML =
       `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
@@ -834,7 +934,7 @@ $('#btn-pack').onclick = () => {
       hint('Scheur het zakje open!', 'sleep over de bovenkant ↔');
   }
   stage.append(dim, el);
-  pack = { el, dim, w, h, min: null, max: null, start: null, done: false, push: FLIPPO, prog: 0 };
+  pack = { el, dim, w, h, min: null, max: null, start: null, done: false, push: FLIPPO, prog: 0, cy };
   el.addEventListener('pointerdown', onPackDown);
   snd('put');
 };
@@ -855,12 +955,12 @@ function makeRoom(n) {
   }
 }
 
-// zak chips: duwen tegen de onderkant (tikken of omhoog slepen) tot de bovenkant popt
+// zak chips: in het midden knijpen (tikken of ingedrukt houden en bewegen) tot de onderkant openscheurt
 function pushSet(prog) {
   pack.prog = Math.max(0, Math.min(1, prog));
   pack.el.style.setProperty('--sq', pack.prog.toFixed(3));
-  pack.el.querySelector('.pk-flap.l').style.transform = `rotate(${-pack.prog * 9}deg)`;
-  pack.el.querySelector('.pk-flap.r').style.transform = `rotate(${pack.prog * 9}deg)`;
+  pack.el.querySelector('.pk-flap.l').style.transform = `rotate(${pack.prog * 9}deg)`;
+  pack.el.querySelector('.pk-flap.r').style.transform = `rotate(${-pack.prog * 9}deg)`;
   const step = Math.floor(pack.prog * 6);
   if (step !== pack.step) { pack.step = step; snd('rip'); }
   if (pack.prog >= 1) packOpen(true);
@@ -868,10 +968,11 @@ function pushSet(prog) {
 
 function onPushDown(e) {
   const r = pack.el.getBoundingClientRect();
-  if ((e.clientY - r.top) / r.height < 0.45) return;       // alleen de onderste helft telt als duwen
-  const y0 = e.clientY, base = pack.prog + 0.22;            // elke duw geeft al een zetje
+  const fy = (e.clientY - r.top) / r.height;
+  if (fy < 0.18 || fy > 0.82) return;                       // alleen het midden telt als knijpen
+  const x0 = e.clientX, y0 = e.clientY, base = pack.prog + 0.22;   // elke kneep geeft al een zetje
   pushSet(base);
-  const move = (ev) => { if (pack && !pack.done) pushSet(base + Math.max(0, y0 - ev.clientY) / (r.height * 0.22)); };
+  const move = (ev) => { if (pack && !pack.done) pushSet(base + Math.hypot(ev.clientX - x0, ev.clientY - y0) / (r.height * 0.25)); };
   const end = () => {
     pack?.el.removeEventListener('pointermove', move);
     if (pack && !pack.done) pushSet(pack.prog * 0.75);      // de zak veert een beetje terug
@@ -879,6 +980,25 @@ function onPushDown(e) {
   pack.el.addEventListener('pointermove', move);
   pack.el.addEventListener('pointerup', end, { once: true });
   pack.el.addEventListener('pointercancel', end, { once: true });
+}
+
+// chips die uit de zak vallen en even op tafel blijven liggen
+function spillChips(x, y, w) {
+  for (let i = 0; i < 26; i++) {
+    const c = document.createElement('div');
+    c.className = 'chip';
+    const size = 46 + Math.random() * 34;
+    c.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;` +
+      `background-image:url(${SET.dir}/chip-${1 + (i % 5)}.webp)`;
+    stage.appendChild(c);
+    const dx = (Math.random() - 0.5) * w * 2.4;
+    const dy = Math.min(L.H - y - 30, 40 + Math.random() * (L.H - y) * 0.9);
+    setTimeout(() => {
+      c.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${Math.random() * 720 - 360}deg)`;
+    }, 30 + i * 28);
+    setTimeout(() => { c.style.opacity = 0; }, 3200 + i * 40);
+    setTimeout(() => c.remove(), 4500);
+  }
 }
 
 function onPackDown(e) {
@@ -919,7 +1039,7 @@ function onPackMove(e) {
 
 function packOpen(fromLeft) {
   pack.done = true;
-  const { el, dim, h } = pack;
+  const { el, dim, h, cy } = pack;
   el.classList.add('open');
   const top = el.querySelector('.pk-top');
   dim.classList.add('gone');
@@ -931,12 +1051,13 @@ function packOpen(fromLeft) {
     // zakje kantelt, de flippo's vallen uit de opening
     setTimeout(() => el.classList.add('tip'), 250);
   } else {
-    // POP: de bovenste naad klapt open, de flippo's springen er aan de bovenkant uit
+    // POP: de onderste naad scheurt open, chips en flippo's vallen eruit
     snd('pop');
     el.classList.add('popped');
     el.style.setProperty('--sq', 0);
-    el.querySelector('.pk-flap.l').style.transform = 'rotate(-80deg)';
-    el.querySelector('.pk-flap.r').style.transform = 'rotate(80deg)';
+    el.querySelector('.pk-flap.l').style.transform = 'rotate(78deg)';
+    el.querySelector('.pk-flap.r').style.transform = 'rotate(-78deg)';
+    spillChips(L.W / 2, cy + h * 0.4, pack.w);
     el.insertAdjacentHTML('beforeend', '<div class="pk-pop">POP!</div>');
   }
   const got = [];
@@ -952,7 +1073,7 @@ function packOpen(fromLeft) {
     got.push(nameOf(id) + (SHINY[id] ? ' ✨' : ''));
     setTimeout(() => {
       d.el.classList.remove('stowed');
-      d.y = L.H / 2 + h * (FLIPPO ? -0.42 : 0.3);
+      d.y = cy + h * (FLIPPO ? 0.4 : 0.3);
       render(d);
       void d.el.offsetWidth;
       Object.assign(d, tableSpot(), { rot: Math.round(Math.random() * 60 - 30) });
@@ -1013,11 +1134,17 @@ function layout3d(root) {
 }
 
 let v3 = null;
-function open3d() {
-  let root = byUid(lastBuilt);
-  if (!root || !root.links.length || root.slot != null) root = discs.find((d) => d.links.length);
-  if (!root) return toast('Zet eerst een paar flippo\'s in elkaar');
-  const { parts, size } = layout3d(root);
+// zonder argument: het laatst aangeraakte bouwwerk. Met een flippo: alleen die ene, in het groot.
+function open3d(single) {
+  let parts, size;
+  if (single) {
+    parts = [{ d: single, X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1], c: [0, 0, 0] }]; size = 1;
+  } else {
+    let root = byUid(lastBuilt);
+    if (!root || !root.links.length || root.slot != null) root = discs.find((d) => d.links.length);
+    if (!root) return toast('Zet eerst een paar flippo\'s in elkaar');
+    ({ parts, size } = layout3d(root));
+  }
   const box = $('#view3d'), world = box.querySelector('.world');
   const R = Math.min(110, Math.min(innerWidth, innerHeight) * 0.36 / size);
   box.style.setProperty('--R', R + 'px');
@@ -1027,14 +1154,22 @@ function open3d() {
     el.className = 'd3 ' + (FLIPPO ? 'flat ' : '') + (SHINY[o.d.id] ? 'shiny ' + SHINY[o.d.id] : '');
     el.style.setProperty('--c', colorOf(o.d.id));
     el.innerHTML = o.d.el.querySelector('.flip').innerHTML;
+    // dikte: een stapeltje laagjes tussen voor- en achterkant vormt de rand
+    const T = Math.max(4, Math.round(R * 0.07));
+    el.style.setProperty('--t', T + 'px');
+    const m = FLIPPO ? `-webkit-mask:url(${imgOf(o.d.id)}) center/100% 100%;mask:url(${imgOf(o.d.id)}) center/100% 100%;` : '';
+    let edge = '';
+    for (let z = -T / 2 + 0.5; z < T / 2; z += 1) edge += `<div class="face edge" style="${m}transform:translateZ(${z}px)"></div>`;
+    el.insertAdjacentHTML('afterbegin', edge);
     const t = o.c.map((v) => (v * R).toFixed(2));
     el.style.transform = `matrix3d(${o.X.join(',')},0,${o.Y.join(',')},0,${o.Z.join(',')},0,${t.join(',')},1)`;
     world.appendChild(el);
   }
-  v3 = { rx: -22, ry: 30, zoom: 1, spin: true, ptrs: new Map(), world };
+  v3 = { rx: single ? -8 : -22, ry: single ? 0 : 30, zoom: 1, spin: true, ptrs: new Map(), world };
   box.classList.add('show');
-  $('#btn-3d').classList.remove('ready');
-  box.querySelector('.v3-title').textContent = `Bouwwerk van ${parts.length} flippo's`;
+  box.querySelector('.v3-title').textContent = single
+    ? `${label(single.id)} · ${nameOf(single.id)}`
+    : `Bouwwerk van ${parts.length} flippo's`;
   cancelAnimationFrame(open3d.raf);
   const tick = () => {
     if (!v3) return;
@@ -1047,7 +1182,6 @@ function open3d() {
 
 (function init3d() {
   const box = $('#view3d'), scene = box.querySelector('.scene');
-  $('#btn-3d').onclick = open3d;
   box.querySelector('.v3-close').onclick = () => { box.classList.remove('show'); v3 = null; };
   scene.addEventListener('pointerdown', (e) => {
     if (!v3) return;
@@ -1081,11 +1215,54 @@ function open3d() {
 
 // ---------- geluid ----------
 let ac = null;
+// ritselend blad: een kort stukje ruis door een filter dat omhoog veegt
+function sndPage() {
+  const dur = 0.42, n = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, n, ac.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (0.6 + 0.4 * Math.sin(i / 55));
+  const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t = ac.currentTime;
+  src.buffer = buf;
+  f.type = 'bandpass'; f.Q.value = 0.9;
+  f.frequency.setValueAtTime(900, t);
+  f.frequency.exponentialRampToValueAtTime(4200, t + dur * 0.55);
+  f.frequency.exponentialRampToValueAtTime(1600, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.07);
+  g.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(ac.destination);
+  src.start(t);
+  // tikje als het blad neerkomt
+  const o = ac.createOscillator(), og = ac.createGain();
+  o.type = 'triangle'; o.frequency.setValueAtTime(170, t + dur); o.frequency.exponentialRampToValueAtTime(70, t + dur + 0.07);
+  og.gain.setValueAtTime(0.16, t + dur); og.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.08);
+  o.connect(og).connect(ac.destination); o.start(t + dur); o.stop(t + dur + 0.1);
+}
+
+// echte opname van een omslaande bladzijde (Wikimedia Commons, publiek domein); wordt één keer geladen
+let pageBuf = null, pageBufAsked = false;
+function loadPageSound() {
+  if (pageBufAsked) return;
+  pageBufAsked = true;
+  fetch('snd/page.mp3?v=2').then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b)).then((buf) => { pageBuf = buf; }).catch(() => {});
+}
+
 function snd(type) {
   if (!soundOn) return;
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state === 'suspended') ac.resume();
+    loadPageSound();
+    if (type === 'page') {
+      if (!pageBuf) return sndPage();      // nog niet geladen: het nagemaakte geluid
+      const src = ac.createBufferSource(), g = ac.createGain();
+      src.buffer = pageBuf;
+      src.playbackRate.value = 0.94 + Math.random() * 0.12;   // elke keer net iets anders
+      g.gain.value = 1;
+      src.connect(g).connect(ac.destination);
+      src.start();
+      return;
+    }
     const [f0, f1, dur, vol, wave] = {
       snap: [1400, 500, 0.06, 0.25, 'square'],
       slot: [420, 140, 0.1, 0.3, 'triangle'],
@@ -1116,7 +1293,9 @@ function toast(msg) {
 }
 
 // ---------- bewaren ----------
+let noSave = false;   // tijdens het weggaan naar het overzicht niets meer bewaren
 function save() {
+  if (noSave) return;
   try {
     localStorage.setItem(STORE, JSON.stringify({
       mode: L.mode, W: L.W, H: L.H, R: L.R, sound: soundOn, album: albumState, page: curPage,
@@ -1148,6 +1327,27 @@ function load() {
   return true;
 }
 
+// ---------- uitleg ----------
+function showHelp() {
+  const rows = [
+    ['👆', 'Sleep', 'een flippo naar zijn vakje in de map'],
+    ['🔄', 'Tik', 'op een flippo om hem om te draaien'],
+    ['🔍', 'Houd vast', 'om een flippo of bouwwerk groot en in 3D te bekijken'],
+    ['🧩', 'Sleep tegen elkaar', FLIPPO ? 'om flippo\'s met inkepingen vast te klikken' : 'om twee Diskeyz vast te klikken'],
+    ['✂️', 'Dubbeltik', 'om een flippo weer los te maken'],
+    ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
+    [FLIPPO ? '🍟' : '🎁', FLIPPO ? 'Tik op de zak chips' : 'Tik op het zakje', 'linksonder voor nieuwe flippo\'s'],
+    ['📚', 'Tik op het stapeltje', 'linksboven om een andere map te pakken'],
+    ['🤏', 'Knijp', 'met twee vingers (of ctrl + scrollen) om in te zoomen'],
+  ];
+  const box = $('#help');
+  box.querySelector('.help-list').innerHTML = rows.map(([e, a, b]) => `<li><span>${e}</span><div><b>${a}</b> ${b}</div></li>`).join('');
+  box.hidden = false;
+  try { localStorage.setItem('flippo-help-' + SET.kind, '1'); } catch { /* geen opslag */ }
+}
+$('#help').onclick = () => { $('#help').hidden = true; };
+$('#btn-help').onclick = showHelp;
+
 // ---------- overzicht: kies een map ----------
 function showChooser() {
   const box = $('#chooser');
@@ -1162,30 +1362,98 @@ function showChooser() {
     card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt=""></div><b>${set.title}</b>` +
       `<span>${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : '30 Diskeyz'}</span>` +
       `<em>${n} / ${total} in de map</em>`;
-    card.onclick = () => { location.hash = key; };
+    card.dataset.key = key;
+    card.onclick = () => pickSet(key, card);
     box.querySelector('.ch-list').appendChild(card);
   }
+  // terug uit een map: die kaft komt van de tafel teruggevlogen, de andere mappen verschijnen weer
+  let from = null;
+  try { from = sessionStorage.getItem('flippo-from'); sessionStorage.removeItem('flippo-from'); } catch { /* geen opslag */ }
+  const card = from && box.querySelector(`.ch-card[data-key="${from}"]`);
+  if (card) {
+    const book = card.querySelector('.ch-book');
+    card.classList.add('picked');
+    box.classList.add('fadeout', 'instant');
+    book.style.transform = flyTransform(book);
+    void book.offsetWidth;
+    box.classList.remove('instant');
+    book.style.transition = 'transform .6s cubic-bezier(.4, 0, .2, 1)';
+    book.style.transform = '';
+    box.classList.remove('fadeout');
+    setTimeout(() => { card.classList.remove('picked'); book.style.transition = ''; }, 650);
+  }
 }
-$('#btn-home').onclick = () => { location.hash = ''; };
+
+// waar ligt de dichte map op tafel? (schermcoördinaten van de voorkaft, inclusief de rug)
+function coverRect() {
+  const l = computeLayout(), tr = table.getBoundingClientRect(), k = l.k;
+  const x = (l.single ? l.ax : l.ax + 480 * l.u) - SPINE * l.u;
+  return {
+    left: tr.left + (tr.width - l.W * k) / 2 + x * k,
+    top: tr.top + (tr.height - l.H * k) / 2 + l.ay * k,
+    width: (PAGE_W + SPINE) * l.u * k,
+    height: 1300 * l.u * k,
+  };
+}
+// verplaatsing en schaal waarmee een kaft uit het overzicht precies op die plek komt
+function flyTransform(book) {
+  const r = book.getBoundingClientRect(), t = coverRect();
+  return `translate(${t.left - r.left}px, ${t.top - r.top}px) scale(${t.width / r.width}, ${t.height / r.height})`;
+}
+
+// een map kiezen: de andere verdwijnen, deze vliegt naar zijn plek op tafel en slaat daar open
+function pickSet(key, card) {
+  const box = $('#chooser');
+  if (box.classList.contains('fadeout')) return;
+  card.classList.add('picked');
+  box.classList.add('fadeout');
+  const book = card.querySelector('.ch-book');
+  book.style.transition = 'transform .6s cubic-bezier(.4, 0, .2, 1)';
+  book.style.transform = flyTransform(book);
+  setTimeout(() => {
+    try { sessionStorage.setItem('flippo-intro', key); } catch { /* geen opslag */ }
+    location.hash = key;
+  }, 620);
+}
+
+// terug naar het overzicht: de map slaat dicht, de tafel verdwijnt, daarna komen de mappen terug
+$('#btn-home').onclick = () => {
+  if (!SET || noSave) return;
+  save();
+  noSave = true;
+  const wasFront = albumState === 'front';
+  document.body.classList.add('outro');
+  if (!wasFront) { albumState = 'front'; applyAlbumState(false); snd('put'); }
+  setTimeout(() => {
+    try { sessionStorage.setItem('flippo-from', Object.keys(SETS).find((k) => SETS[k] === SET)); } catch { /* geen opslag */ }
+    location.hash = '';
+  }, wasFront ? 420 : 820);
+};
 window.addEventListener('hashchange', () => location.reload());
+// pijltjestoetsen bladeren ook
+window.addEventListener('keydown', (e) => {
+  if (!SET || v3 || pack) return;
+  if (e.key === 'ArrowRight') turnPage(1);
+  if (e.key === 'ArrowLeft') turnPage(-1);
+});
 
 // ---------- start ----------
 if (!SET) {
   showChooser();
 } else {
   document.title = SET.title;
-  $('.logo').textContent = SET.title;
-  if (FLIPPO) {
-    // alleen de series met inkepingen kun je in elkaar zetten
-    const any = IDS.some(hasSlits);
-    $('#btn-loose').hidden = !any;
-    $('#btn-3d').hidden = !any;
-    const pk = $('#btn-pack');
-    pk.querySelector('span').textContent = 'Zak chips openen';
-    pk.dataset.short = 'Chips';
-    pk.title = `Krijg ${PACK_N} flippo's`;
-    $('#hint').textContent = 'Sleep een flippo naar zijn vakje  ·  Flippo\'s met inkepingen klik je in elkaar  ·  Tik = omdraaien  ·  Dubbeltik = losmaken  ·  Bladeren met de pijltjes of door te vegen';
-  }
+  // voorwerpen op tafel in plaats van knoppen
+  const pk = $('#btn-pack');
+  pk.hidden = false;
+  pk.style.backgroundImage = `url(${SET.pack})`;
+  pk.style.aspectRatio = SET.packRatio;
+  pk.title = FLIPPO ? `Zak chips: ${PACK_N} flippo's` : 'Zakje met 3 Diskeyz';
+  pk.classList.toggle('chips', FLIPPO);
+  const home = $('#btn-home');
+  home.hidden = false;
+  home.innerHTML = Object.values(SETS).filter((x) => x !== SET).map((x) => `<i style="background-image:url(${x.cover})"></i>`).join('');
+  $('#btn-sound').hidden = false;
+  $('#btn-help').hidden = false;
   applyLayout();
   if (!load()) {
     if (FLIPPO) toast('Open een zak chips om flippo\'s te krijgen!');
@@ -1194,4 +1462,24 @@ if (!SET) {
   updateCount.last = null;
   updateCount();
   window.addEventListener('resize', applyLayout);
+  // lege map: het zakje wiebelt om te laten zien waar je begint
+  pk.classList.toggle('nudge', !discs.length);
+  // de eerste keer: uitleg van de gebaren
+  let seen = false;
+  try { seen = localStorage.getItem('flippo-help-' + SET.kind); } catch { /* geen opslag */ }
+  if (!seen) setTimeout(showHelp, 900);
+  // net gekozen in het overzicht: de map ligt eerst dicht op tafel en slaat dan vloeiend open
+  let intro = null;
+  try { intro = sessionStorage.getItem('flippo-intro'); sessionStorage.removeItem('flippo-intro'); } catch { /* geen opslag */ }
+  if (intro) {
+    const want = albumState;
+    document.body.classList.add('intro');
+    albumState = 'front';
+    applyAlbumState(true);
+    void albumEl.offsetWidth;
+    setTimeout(() => {
+      document.body.classList.remove('intro');
+      if (want !== 'front') { albumState = want; applyAlbumState(false); snd('flip'); }
+    }, 140);
+  }
 }

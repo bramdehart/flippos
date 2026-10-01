@@ -16,13 +16,13 @@ Je kiest eerst welke map je pakt. Elke map bewaart zijn eigen verzameling.
 
 ## De originele flippo's
 
-De flippo-mappen zijn ringbanden met insteekbladen: twintig vakjes per blad, met achter elk vakje alvast het plaatje dat erin hoort. Je bladert met de pijltjes of door te vegen. Pak je een flippo vast, dan slaat de map vanzelf open op het goede blad, en laat je hem los boven zijn vakje, dan schuift hij van boven in het hoesje.
+De flippo-mappen zijn ringbanden met insteekbladen: twintig vakjes per blad, met achter elk vakje alvast het plaatje dat erin hoort. Je slaat een bladzijde om door hem vast te pakken en opzij te slepen. Pak je een flippo vast, dan slaat de map vanzelf open op het goede blad, en laat je hem los boven zijn vakje, dan schuift hij van boven in het hoesje.
 
 ![Een opengeslagen flippo-map met insteekbladen](docs/flippomap.jpg)
 
 ### Zak chips
 
-Je begint met een lege map. Flippo's krijg je uit een zak chips: duw tegen de onderkant tot hij aan de bovenkant openpopt. Er springen er vijf uit, en meestal zit er een nieuwe tussen.
+Je begint met een lege map. Flippo's krijg je uit een zak chips: knijp in het midden tot de onderkant openscheurt. De chips vallen eruit, samen met vijf flippo's, en meestal zit er een nieuwe tussen.
 
 ![Een zak Smiths-chips die net is opengepopt](docs/chips.jpg)
 
@@ -52,19 +52,19 @@ Nieuwe Diskeyz nodig? Pak een zakje en scheur het zelf open door over de bovenka
 
 ## De map dichtklappen
 
-Klaar met spelen? Klap de map dicht. Je verzameling blijft veilig binnenin zitten, en je kunt de map omdraaien om de achterkant te zien.
+Klaar met spelen? Sla de kaft dicht door op de eerste bladzijde het linkerblad naar rechts te slepen. Je verzameling blijft veilig binnenin zitten. De dichte map sleep je weer open, of je sleept de andere kant op om hem om te draaien en de achterkant te zien.
 
 ![De dichtgeklapte Diskeyz-map met de voorkaft](docs/kaft.jpg)
 
 ## Ook op je telefoon
 
-Op een telefoon zie je één bladzijde van de map tegelijk, zodat alles groot genoeg blijft voor je vingers. Bladeren doe je met het pijltje of door te vegen, en met twee vingers zoom je in op de tafel.
+Op een telefoon zie je één bladzijde van de map tegelijk, zodat alles groot genoeg blijft voor je vingers. Een bladzijde sla je om door hem opzij te slepen, en met twee vingers zoom je in op de tafel.
 
 <img src="docs/mobiel.jpg" alt="De Diskeyz-map op een telefoon, met één pagina in beeld" width="300">
 
 ## Spelen
 
-Ga naar [flippos.bramdehart.nl](https://flippos.bramdehart.nl). Je spel wordt vanzelf bewaard.
+Ga naar [flippos.bramdehart.nl](https://flippos.bramdehart.nl). Je spel wordt vanzelf bewaard. Er zijn geen knoppen: alles doe je met de dingen die op tafel liggen. De eerste keer krijg je een korte uitleg, en het vraagteken rechtsboven laat hem opnieuw zien.
 
 | Wat je doet | Wat er gebeurt |
 | --- | --- |
@@ -72,6 +72,10 @@ Ga naar [flippos.bramdehart.nl](https://flippos.bramdehart.nl). Je spel wordt va
 | Twee flippo's met gleufjes tegen elkaar slepen | Ze klikken vast |
 | Tikken | Flippo omdraaien |
 | Dubbeltikken | Flippo losmaken uit een bouwwerk |
+| Ingedrukt houden | Flippo of bouwwerk groot en in 3D bekijken |
 | Scrollen boven een flippo | Flippo of bouwwerk draaien |
-| Vegen over de map | Bladeren |
+| Een bladzijde opzij slepen | Bladzijde omslaan |
+| De kaft opzij slepen | Map dichtslaan, openslaan of omdraaien |
 | Knijpen, of ctrl + scrollen | In- en uitzoomen |
+| Tikken op het zakje of de zak chips | Nieuwe flippo's openmaken |
+| Tikken op het stapeltje mappen | Een andere map pakken |

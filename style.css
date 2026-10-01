@@ -143,7 +143,7 @@ body {
   transition: transform .7s cubic-bezier(.4, 0, .2, 1);
 }
 .leaf.left { transform-origin: calc(100% + var(--u) * 20) 50%; }
-.album.closed .leaf.left { transform: rotateY(180deg) translateZ(-2px); }
+.album.closed .leaf.left { transform: rotateY(180deg) translateZ(calc(var(--u) * -44)); }
 .leaf > * {
   position: absolute;
   inset: 0;
@@ -512,7 +512,7 @@ body {
 /* ---------- één pagina tegelijk (staand scherm) ---------- */
 .album.single .spine, .album.single .leaf { display: none; }
 .album.single.p0 .leaf.left, .album.single.p1 .leaf.right { display: block; }
-.album.single .leaf { transform-origin: 50% 50%; animation: leafin .45s ease-out; }
+.album.single .leaf { transform-origin: 50% 50%; }
 .album.single.closed, .album.single.closed.turned { transform: none; }
 .album.single.closed .leaf.right { display: none; }
 .album.single.closed .leaf.left { display: block; transform: rotateY(180deg); }
@@ -593,8 +593,8 @@ body {
   pointer-events: none;
 }
 .d3 .face { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-.d3 .front { display: block; transform: translateZ(.6px); }
-.d3 .back { display: grid; transform: rotateY(180deg) translateZ(.6px); }
+.d3 .front { display: block; transform: translateZ(calc(var(--t, 1.2px) / 2)); }
+.d3 .back { display: grid; transform: rotateY(180deg) translateZ(calc(var(--t, 1.2px) / 2)); }
 
 /* Dichte map: inhoud van de pagina's echt verbergen. Alleen op backface-visibility
    vertrouwen is niet genoeg: Safari tekent de vakjes dan dwars door de kaft heen. */
@@ -753,7 +753,7 @@ body {
   0%, 100% { box-shadow: 0 0 0 calc(var(--u) * 3) var(--c); }
   50% { box-shadow: 0 0 0 calc(var(--u) * 12) var(--c), 0 0 calc(var(--u) * 30) calc(var(--u) * 10) var(--c); }
 }
-.album.turnpage .page { animation: pagein .3s ease-out; }
+
 @keyframes pagein { from { opacity: .25; } }
 
 /* ronde flippo's: het plaatje heeft zelf al de juiste vorm, dus geen masker met gleufjes */
@@ -797,14 +797,14 @@ body {
     repeating-linear-gradient(90deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 7px) bottom / 100% 5% no-repeat;
 }
 .pk-flap { transition: transform .08s linear; }
-.pk-flap.l { transform-origin: 0% 13%; }
-.pk-flap.r { transform-origin: 100% 13%; }
-/* --sq = hoe hard er tegen de onderkant geduwd wordt: de zak wordt korter en boller */
+.pk-flap.l { transform-origin: 0% 88%; }
+.pk-flap.r { transform-origin: 100% 88%; }
+/* --sq = hoe hard er in het midden geknepen wordt: de zak wordt smaller en langer */
 .pk-wrap {
   position: absolute;
   inset: 0;
-  transform-origin: 50% 0;
-  transform: scale(calc(1 + var(--sq, 0) * .1), calc(1 - var(--sq, 0) * .1));
+  transform-origin: 50% 50%;
+  transform: scale(calc(1 - var(--sq, 0) * .12), calc(1 + var(--sq, 0) * .05));
   transition: transform .12s ease-out;
 }
 .pack.popped { animation: bagpop .4s cubic-bezier(.3, 1.6, .5, 1); }
@@ -817,7 +817,7 @@ body {
 .pk-pop {
   position: absolute;
   left: 50%;
-  top: 6%;
+  top: 92%;
   transform: translate(-50%, -50%);
   font-size: calc(54px * var(--hs, 1));
   font-weight: 900;
@@ -865,4 +865,217 @@ body {
   .ch-card { max-width: none; }
   .ch-card b { font-size: 15px; }
   .ch-card span, .ch-card em { font-size: 12px; }
+}
+
+/* chips die uit de zak vallen */
+.chip {
+  position: absolute;
+  z-index: 99997;
+  transform: translate(-50%, -50%) scale(.3);
+  background: center / contain no-repeat;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .35));
+  pointer-events: none;
+  transition: transform .65s cubic-bezier(.25, 1.1, .5, 1), opacity .8s;
+}
+
+/* ---------- bladzijde omslaan ---------- */
+.turnlayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+.tstatic { position: absolute; top: 0; overflow: hidden; border-radius: calc(var(--u) * 14); }
+.pgclone { position: absolute; top: 0; }
+.pgclone > .page { position: absolute; inset: 0; }
+.pgclone .ghost { position: absolute; z-index: 3; width: calc(var(--u) * 186); height: calc(var(--u) * 186); border-radius: 50%; }
+.turner { position: absolute; top: 0; transform-style: preserve-3d; animation: .7s cubic-bezier(.45, .05, .4, 1) both; }
+.turnlayer.fwd .turner { animation-name: turnF; }
+.turnlayer.bwd .turner { animation-name: turnB; }
+.turnlayer.one.fwd .turner { animation-name: turnOut; }
+.turnlayer.one.bwd .turner { animation-name: turnIn; }
+/* het blad schuift onderweg ook de breedte van de rug op, zodat het precies op de andere bladzijde landt */
+@keyframes turnF { from { transform: translateX(0) rotateY(0); } to { transform: translateX(calc(var(--gap) * -1)) rotateY(-180deg); } }
+@keyframes turnB { from { transform: translateX(0) rotateY(0); } to { transform: translateX(var(--gap)) rotateY(180deg); } }
+@keyframes turnOut { from { transform: rotateY(0); opacity: 1; } 75% { opacity: 1; } to { transform: rotateY(-100deg); opacity: 0; } }
+@keyframes turnIn { from { transform: rotateY(-100deg); opacity: 0; } 25% { opacity: 1; } to { transform: rotateY(0); opacity: 1; } }
+.tseg { position: absolute; top: 0; transform-style: preserve-3d; animation: .7s ease-in-out both; }
+.turnlayer.fwd .tseg { animation-name: bendF; }
+.turnlayer.bwd .tseg { animation-name: bendB; }
+.turnlayer.one.bwd .tseg { animation-name: bendF; }
+@keyframes bendF { 50% { transform: rotateY(7deg); } }
+@keyframes bendB { 50% { transform: rotateY(-7deg); } }
+.tf { position: absolute; inset: 0; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.tf.tback { transform: rotateY(180deg); }
+.tf::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .1), rgba(255, 255, 255, .08));
+  animation: tshade .7s ease-in-out both;
+}
+@keyframes tshade { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+/* rand van een flippo in 3D: laagjes in de kleur van het materiaal */
+.d3 .edge {
+  -webkit-backface-visibility: visible;
+  backface-visibility: visible;
+  background: color-mix(in srgb, var(--c) 55%, #fff);
+}
+.d3.flat .edge { background: #d8d4c8; border-radius: 0; overflow: hidden; }
+
+/* omgekruld hoekje onderaan de bladzijde: pak het blad hier (of ergens anders op de bladzijde) vast */
+.curl {
+  position: absolute;
+  bottom: 0;
+  width: calc(var(--u) * 110);
+  height: calc(var(--u) * 110);
+  z-index: 3;
+  cursor: grab;
+  transition: transform .2s;
+}
+.curl[hidden] { display: none; }
+.curl.next { right: 0; background: linear-gradient(315deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); border-top-left-radius: 100% 100%; clip-path: polygon(100% 0, 0 100%, 0 0); transform-origin: 100% 100%; }
+.curl.prev { left: 0; background: linear-gradient(45deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); clip-path: polygon(0 0, 100% 100%, 100% 0); transform-origin: 0 100%; }
+.curl:hover { transform: scale(1.25); }
+.album.closed .curl, .album:has(.turnlayer) .curl { display: none; }
+.page { cursor: grab; }
+
+/* dikte van de dichte map (zie je als hij omdraait) */
+.slab {
+  position: absolute;
+  top: calc(var(--u) * 6);
+  left: calc(var(--u) * 920);
+  width: calc(var(--u) * 874);
+  height: calc(var(--u) * 1288);
+  border-radius: calc(var(--u) * 8);
+  background: repeating-linear-gradient(0deg, #f6f1df 0 2px, #e2dcc6 2px 3px);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+}
+.album.closed .slab { opacity: 1; transition-delay: .5s; }
+.album.single .slab { display: none; }
+
+/* ---------- overgang tussen overzicht en map ---------- */
+#chooser h1, .ch-card, .ch-card b, .ch-card span, .ch-card em { transition: opacity .4s, transform .18s; }
+#chooser.fadeout h1, #chooser.fadeout .ch-card:not(.picked),
+#chooser.fadeout .ch-card b, #chooser.fadeout .ch-card span, #chooser.fadeout .ch-card em { opacity: 0; }
+#chooser.instant * { transition: none !important; }
+.ch-card.picked { transform: none !important; z-index: 2; }
+.ch-card.picked .ch-book { transform-origin: 0 0; }
+#bar, #hint { transition: opacity .45s; }
+body.intro .disc, body.outro .disc { opacity: 0 !important; transition: opacity .45s; }
+body.intro #bar, body.intro #hint, body.outro #bar, body.outro #hint { opacity: 0; }
+body.intro .disc, body.intro #bar, body.intro #hint { transition: none; }
+
+/* ---------- voorwerpen op tafel (in plaats van een knoppenbalk) ---------- */
+.obj {
+  position: absolute;
+  z-index: 6;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  transition: transform .18s, opacity .45s;
+  -webkit-tap-highlight-color: transparent;
+}
+.obj[hidden] { display: none; }
+.obj:hover { transform: scale(1.08) rotate(var(--tilt, 0deg)); }
+.obj:active { transform: scale(.96) rotate(var(--tilt, 0deg)); }
+/* het zakje of de zak chips, linksonder */
+#btn-pack {
+  --tilt: -9deg;
+  left: 16px;
+  bottom: 16px;
+  height: clamp(86px, 17vh, 150px);
+  background: center / 100% 100% no-repeat;
+  border-radius: 6px;
+  transform: rotate(var(--tilt));
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .45));
+}
+#btn-pack.nudge { animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge {
+  0%, 60%, 100% { transform: rotate(-9deg); }
+  70% { transform: rotate(-16deg) scale(1.08); }
+  80% { transform: rotate(-3deg) scale(1.08); }
+  90% { transform: rotate(-12deg) scale(1.04); }
+}
+/* stapeltje met de andere mappen, linksboven */
+#btn-home { left: 18px; top: 16px; width: clamp(48px, 7vh, 70px); aspect-ratio: 880 / 1300; --tilt: 0deg; }
+#btn-home i {
+  position: absolute;
+  inset: 0;
+  background: center / cover;
+  border-radius: 4px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .45), -3px 0 0 rgba(0, 0, 0, .2);
+  transform: rotate(-7deg);
+}
+#btn-home i + i { transform: translate(9px, 5px) rotate(6deg); }
+/* geluid en uitleg, rechtsboven */
+#btn-sound, #btn-help {
+  top: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .55);
+  font-size: 19px;
+  font-weight: 800;
+  color: #4a4438;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .25);
+}
+#btn-sound { right: 14px; }
+#btn-help { right: 62px; }
+body.intro .obj, body.outro .obj { opacity: 0; }
+body.intro .obj { transition: none; }
+
+/* ---------- uitleg bij de eerste keer ---------- */
+#help {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 25, 60, .55);
+  cursor: pointer;
+}
+#help[hidden] { display: none; }
+.help-card {
+  background: #fffdf5;
+  border-radius: 18px;
+  padding: 18px 22px 14px;
+  max-width: 460px;
+  max-height: 92vh;
+  overflow: auto;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+  color: #2f2a20;
+}
+.help-card h2 { margin: 0 0 10px; font-size: 22px; color: #143a75; }
+.help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; font-size: 15px; line-height: 1.3; }
+.help-list li { display: flex; gap: 11px; align-items: flex-start; }
+.help-list span { flex: none; width: 26px; text-align: center; font-size: 19px; }
+.help-card p { margin: 14px 0 0; text-align: center; font-weight: 800; color: #143a75; }
+
+/* melding onderaan: hooguit drie regels, de rest wordt afgekapt met … */
+#toast {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  width: max-content;
+  max-width: min(92vw, 520px);
+  border-radius: 20px;
+  /* rand in plaats van opvulling: anders piept de vierde regel door de onderste opvulling heen */
+  padding: 0 8px;
+  border: 10px solid #143a75;
+  text-align: center;
+  line-height: 1.3;
 }

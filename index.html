@@ -4,30 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flippo's</title>
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
-<header id="bar">
-  <strong class="logo">Flippo's</strong>
-  <span id="count" class="count">0 / 30 in de map</span>
-  <span class="spacer"></span>
-  <button id="btn-home" data-short="Mappen" title="Terug naar het overzicht van de mappen">🏠 <span>Mappen</span></button>
-  <button id="btn-album" data-short="In map" title="Stop alle flippo's in de map">📖 <span>Alles in de map</span></button>
-  <button id="btn-close" data-short="Dicht" title="Klap de map dicht of open">📕 <span>Map dichtklappen</span></button>
-  <button id="btn-turn" data-short="Omdraaien" title="Draai de dichte map om">🔄 <span>Map omdraaien</span></button>
-  <button id="btn-table" data-short="Op tafel" title="Gooi alle flippo's op tafel">🎲 <span>Op tafel gooien</span></button>
-  <button id="btn-loose" data-short="Losmaken" title="Haal alle bouwsels uit elkaar">✂️ <span>Alles losmaken</span></button>
-  <button id="btn-3d" data-short="3D" title="Bekijk je bouwwerk in 3D">🧊 <span>3D bekijken</span></button>
-  <button id="btn-pack" data-short="Zakje" title="Krijg 3 extra flippo's">🎁 <span>Zakje openen</span></button>
-  <button id="btn-sound" data-short="Geluid" title="Geluid aan/uit">🔊</button>
-</header>
 <main id="table">
   <div id="stage"></div>
+  <!-- voorwerpen op tafel -->
+  <button id="btn-home" class="obj" title="Andere map pakken" hidden></button>
+  <button id="btn-pack" class="obj" hidden></button>
+  <button id="btn-sound" class="obj" title="Geluid aan/uit" hidden>🔊</button>
+  <button id="btn-help" class="obj" title="Uitleg" hidden>?</button>
 </main>
-<footer id="hint">
-  Sleep een flippo naar zijn vakje &nbsp;·&nbsp; Sleep twee flippo's tegen elkaar om ze vast te klikken &nbsp;·&nbsp;
-  Tik = omdraaien &nbsp;·&nbsp; Dubbeltik = losmaken &nbsp;·&nbsp; Scrollen = draaien &nbsp;·&nbsp; Knijpen of ctrl+scrollen = zoomen
-</footer>
+<div id="help" hidden>
+  <div class="help-card">
+    <h2>Zo speel je</h2>
+    <ul class="help-list"></ul>
+    <p>Tik om te beginnen</p>
+  </div>
+</div>
 <div id="view3d">
   <div class="v3-title"></div>
   <button class="v3-close" title="Sluiten">✕</button>
@@ -39,7 +33,7 @@
   <div class="ch-list"></div>
 </div>
 <div id="toast"></div>
-<script src="flippos-data.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="flippos-data.js?v=34"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
