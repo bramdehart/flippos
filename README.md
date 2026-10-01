@@ -1,6 +1,6 @@
 # Flippo's
 
-> Gemaakt voor mijn neefjes, met foto's van eigen map en flippo's. Dit is geen officieel product: Diskeyz is een spaaractie van Albert Heijn met figuren van Disney en Pixar, de flippo's zijn van Smiths met figuren van Warner Bros. De plaatjes van de Smiths-flippo's komen van [milkcapmania.co.uk](https://www.milkcapmania.co.uk/Flippos/).
+> Gemaakt voor mijn neefjes, met foto's van eigen map en flippo's. Dit is geen officieel product: Diskeyz is een spaaractie van Albert Heijn met figuren van Disney en Pixar, de flippo's zijn van Smiths met figuren van Warner Bros. De Pokémon-munten zijn van Nintendo; de plaatjes daarvan komen van [LastDodo](https://www.lastdodo.nl/nl/areas/1407079-pokemon-munten). De plaatjes van de Smiths-flippo's komen van [milkcapmania.co.uk](https://www.milkcapmania.co.uk/Flippos/).
 
 Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzamel ze allemaal en klik ze in elkaar tot een bouwwerk.
 
@@ -8,12 +8,13 @@ Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzam
 
 ![Drie mappen op tafel om uit te kiezen: Flippo's map 1, Flippo's map 2 en AH Diskeyz](docs/keuze.jpg)
 
-## Drie mappen
+## Vier mappen
 
-Je begint bij de tafel met drie mappen. Tik er een aan en hij vliegt naar het midden en slaat open. Elke map bewaart zijn eigen verzameling.
+Je begint bij de tafel met vier mappen. Tik er een aan en hij vliegt naar het midden en slaat open. Elke map bewaart zijn eigen verzameling.
 
 - **Flippo's map 1 (1995)** – de originele flippo's uit de zakken Smiths-chips, nummer 1 tot en met 250.
 - **Flippo's map 2 (1996)** – het vervolg, nummer 251 tot en met 545.
+- **Pokémon munten (2001)** – de 48 metalen munten van serie 1, uit de muntenmap van Konmar en Super de Boer.
 - **AH Diskeyz (2026)** – de 30 Diskeyz van Albert Heijn.
 
 ## Geen knoppen
@@ -59,6 +60,12 @@ Elke Diskey heeft acht gleufjes, dus je kunt ze allemaal in elkaar klikken.
 Ook hier begin je met een lege map. Diskeyz komen uit een zakje dat je aan de bovenkant openscheurt. Er vallen er drie uit, en meestal zit er een nieuwe tussen.
 
 ![Een half opengescheurd zakje Diskeyz](docs/zakje.jpg)
+
+## Pokémon-munten
+
+Een kleinere, rode map met twaalf munten per bladzijde. De munten zijn een slag groter dan flippo's, hebben een bolle glans en een zilveren achterkant die flink glimt als je ze omdraait. Ze komen uit een zakje van drie.
+
+![De Pokémon-muntenmap met munten op tafel](docs/pokemon.jpg)
 
 ## De map dichtdoen en omdraaien
 
