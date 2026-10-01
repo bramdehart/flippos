@@ -131,7 +131,7 @@ body {
   transform-style: preserve-3d;
   /* draaipunt = midden van de dichte map (rechterblad + rug) */
   transform-origin: 74.44% 50%;
-  transition: transform .7s cubic-bezier(.4, 0, .2, 1);
+  transition: transform .7s cubic-bezier(.45, 0, .55, 1);
 }
 .album.closed { transform: translateX(calc(var(--u) * -440)); cursor: pointer; }
 .album.closed.turned { transform: translateX(calc(var(--u) * -440)) rotateY(180deg); }
@@ -140,7 +140,7 @@ body {
   width: calc(var(--u) * 880);
   height: calc(var(--u) * var(--ph, 1300));
   transform-style: preserve-3d;
-  transition: transform .7s cubic-bezier(.4, 0, .2, 1);
+  transition: transform .7s cubic-bezier(.45, 0, .55, 1);
 }
 .leaf.left { transform-origin: calc(100% + var(--u) * 20) 50%; }
 .album.closed .leaf.left { transform: rotateY(180deg) translateZ(calc(var(--u) * -44)); }
@@ -603,7 +603,9 @@ body {
 .album.closed .page > * { visibility: hidden; }
 .album.closed .leaf.left .page > * { transition-delay: .35s; }
 .album.closed .leaf.right .page > * { transition-delay: .65s; }
-.album.single .page > * { transition-delay: 0s !important; }
+/* één bladzijde in beeld: het blad draait om zijn midden, dus de inhoud wisselt precies halverwege (op zijn kant) */
+.album.single .page > * { transition-delay: .35s !important; }
+.album.single.opening.p1 .leaf.right .page > * { transition-delay: .3s !important; }
 
 #bar button[hidden] { display: none; }
 
@@ -942,7 +944,7 @@ body {
 .curl.next { right: 0; background: linear-gradient(315deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); border-top-left-radius: 100% 100%; clip-path: polygon(100% 0, 0 100%, 0 0); transform-origin: 100% 100%; }
 .curl.prev { left: 0; background: linear-gradient(45deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); clip-path: polygon(0 0, 100% 100%, 100% 0); transform-origin: 0 100%; }
 .curl:hover { transform: scale(1.25); }
-.album.closed .curl, .album.opening .curl, .album:has(.turnlayer) .curl { display: none; }
+.album.closed .curl, .album.opening .curl, .album.turning .curl { display: none; }
 .page { cursor: grab; }
 
 /* dikte van de dichte map (zie je als hij omdraait) */
@@ -970,9 +972,9 @@ body {
 .ch-card.picked { transform: none !important; z-index: 2; }
 .ch-card.picked .ch-book { transform-origin: 0 0; }
 #bar, #hint { transition: opacity .45s; }
-body.intro .disc, body.outro .disc { opacity: 0 !important; transition: opacity .45s; }
+body.intro #stage > .disc, body.outro #stage > .disc { opacity: 0 !important; transition: opacity .45s; }
 body.intro #bar, body.intro #hint, body.outro #bar, body.outro #hint { opacity: 0; }
-body.intro .disc, body.intro #bar, body.intro #hint { transition: none; }
+body.intro #stage > .disc { transition: none; }
 
 /* ---------- voorwerpen op tafel (in plaats van een knoppenbalk) ---------- */
 .obj {
@@ -1474,3 +1476,63 @@ html, body { -webkit-touch-callout: none; }
   .ch-card + .ch-card, .ch-card:nth-child(3) + .ch-card { margin-left: -24vw; }
   .ch-list { padding-top: 44px; padding-bottom: 30px; }
 }
+
+/* ================= map-animaties zonder geflikker =================
+   1. Flippo's in de map zijn kinderen van hun vakje en draaien dus vanzelf mee met blad en kaft.
+   2. Het omslaande blad bestaat uit de echte bladzijden.
+   3. De "dikte" van de dichte map zijn alleen randjes; ze kunnen de bladzijde niet meer afdekken. */
+.album { --ringc: #2f79c9; }
+.album.binder { --ringc: #c9b76a; }
+.album.pokebook { --ringc: #b3121c; }
+
+.disc.docked, .disc.coin.docked, .disc.flat.docked {
+  left: 0;
+  top: 0;
+  transform: translate(calc(var(--R) * -1), calc(var(--R) * -1)) scale(var(--sc, 1));
+  will-change: auto;
+  filter: none;
+  transition: none;
+}
+.disc.docked.pop { animation: none; }
+
+.turnsheet {
+  position: absolute;
+  top: 0;
+  width: calc(var(--u) * 880);
+  height: calc(var(--u) * var(--ph, 1300));
+  transform-style: preserve-3d;
+  z-index: 4;
+  pointer-events: none;
+}
+.turnsheet > .page {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(1px);            /* net boven de bladen eronder, anders knippert het waar ze samenvallen */
+  box-shadow: 0 calc(var(--u) * 10) calc(var(--u) * 36) rgba(0, 0, 0, .4), 0 0 0 calc(var(--u) * 6) var(--ringc);
+}
+.turnsheet > .page.flipside { transform: rotateY(180deg) translateZ(1px); }
+.turnsheet .page > * { visibility: visible !important; transition: none !important; }
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .2), rgba(255, 255, 255, .12));
+  opacity: 0;
+}
+
+/* randjes in plaats van volle vlakken */
+.slab {
+  background: none;
+  border: calc(var(--u) * 5) solid #efe9d3;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+.album.closed .slab { transition-delay: .36s; }
+
+/* telefoon: openen op een rechterbladzijde vanaf de voorkaft: de kaft draait weg, dan komt de bladzijde */
+.album.single.opening.p1[data-from="front"] .leaf.left { display: block; animation: coveraway .3s ease-in forwards; }
+.album.single.opening.p1[data-from="front"] .leaf.right { animation: coverin .34s ease-out .3s backwards; }
+@keyframes coveraway { from { transform: rotateY(180deg); } to { transform: rotateY(90deg); } }

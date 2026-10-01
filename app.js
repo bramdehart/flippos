@@ -228,7 +228,7 @@ const TURN_MS = 700;
 // de dichte map openslaan: van voren op de eerste bladzijden, van achteren op de laatste
 function openAlbumFrom(state) {
   const p = state === 'back' ? PAGES.length - 1 - (L.single ? 0 : 1) : 0;
-  if (p !== curPage) { curPage = p; buildAlbum(); void albumEl.offsetWidth; }
+  if (p !== curPage) { curPage = p; setSpread(p - (p % 2)); applyAlbumState(true); void albumEl.offsetWidth; }
   setAlbum('open');
 }
 
@@ -261,12 +261,12 @@ function pageDragMove(e) {
     // geen bladzijde meer die kant op: dan sla je de kaft dicht
     const next = curPage + dir * (L.single ? 1 : 2);
     if (next < 0 || next >= PAGES.length) { coverGesture(dx); return; }
-    pd.turn = beginTurn(dir);
+    pd.turn = startTurn(next, true);
     if (!pd.turn) { pageDrag = null; return; }
     pd.dir = dir;
-    pd.anims = pd.turn.layer.getAnimations({ subtree: true });
-    pd.anims.forEach((a) => a.pause());
+    pd.anims = pd.turn.anims;
   }
+  if (pd.turn !== turn) { pageDrag = null; return; }   // de omslag is intussen al afgerond
   const span = PAGE_W * L.u * L.k * (L.single ? 0.9 : 1.7);
   pd.prog = Math.max(0, Math.min(0.98, (pd.dir === 1 ? -dx : dx) / span));
   pd.anims.forEach((a) => { a.currentTime = pd.prog * TURN_MS; });
@@ -277,32 +277,20 @@ function pageDragEnd(e) {
   if (!pd || pd.id !== e.pointerId) return;
   pageDrag = null;
   if (!pd.turn) return;
-  const { layer, old } = pd.turn;
+  if (pd.turn !== turn) return;
   if (pd.prog > 0.28) {
     // ver genoeg: het blad valt vanzelf verder om
+    turn.ok = true;
     pd.anims.forEach((a) => a.play());
     snd('page');
-    animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); save(); }, TURN_MS * (1 - pd.prog) + 30);
   } else {
     // losgelaten voor het midden: het blad valt terug
+    turn.ok = false;
+    if (pd.prog <= 0.001) return turn.finish();
     pd.anims.forEach((a) => { a.playbackRate = -1; a.play(); });
-    animateTurn.t = setTimeout(() => {
-      layer.remove();
-      curPage = old;
-      buildAlbum();
-    }, TURN_MS * pd.prog + 30);
   }
 }
 
-// zet de map alvast op de nieuwe bladzijden en legt het omslaande blad klaar (stilstaand)
-function beginTurn(dir) {
-  let p = curPage + dir * (L.single ? 1 : 2);
-  if (p < 0 || p >= PAGES.length || albumEl.querySelector('.turnlayer')) return null;
-  const old = curPage, oldSnap = snapPages();
-  curPage = p;
-  swapAlbum();
-  return { old, layer: animateTurn(old, p, oldSnap, true) };
-}
 window.addEventListener('pointermove', (e) => {
   const p = bgPointers.get(e.pointerId);
   if (!p) return;
@@ -341,12 +329,128 @@ table.addEventListener('wheel', (e) => {
   zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
 }, { passive: false });
 
-// hold = de oude map blijft nog even staan en de nieuwe is onzichtbaar tot alle plaatjes klaar zijn
-// (anders flikkert het bij het omslaan); animateTurn wisselt ze om.
-function buildAlbum(hold = false) {
-  stage.querySelectorAll('.albumwrap.oldwrap').forEach((w) => w.remove());
-  const oldWrap = stage.querySelector('.albumwrap');
-  if (hold && oldWrap) oldWrap.classList.add('oldwrap'); else oldWrap?.remove();
+// Eén bladzijde als los element, met de flippo's die erin zitten er echt in (zie dock).
+// Daardoor draait alles vanzelf mee als een blad of de kaft beweegt.
+// Gebouwde bladzijden worden bewaard, zodat omslaan alleen nog elementen verplaatst.
+let pageCache = new Map();
+function makePage(pi) {
+  let page = pageCache.get(pi);
+  if (!page) { page = buildPage(pi); pageCache.set(pi, page); }
+  for (const sl of PAGES[pi].slots || []) { const d = slots[sl.id].uid != null && byUid(slots[sl.id].uid); if (d) dock(d, true); }
+  return page;
+}
+// plaatjes alvast uitpakken, zodat het eerste beeld waarin ze verschijnen niet hoeft te wachten
+const predecode = (el) => el.querySelectorAll('img').forEach((im) => im.decode?.().catch(() => {}));
+const coverImgs = [];
+// buren alvast klaarzetten als de browser niets te doen heeft
+function warmPages() {
+  const b = curPage - (curPage % 2);
+  const todo = [b + 2, b + 3, b - 2, b - 1, b + 4, b + 5].filter((pi) => PAGES[pi] && !pageCache.has(pi));
+  if (!todo.length) return;
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 80));
+  idle(() => {
+    const pi = todo[0];
+    if (!pageCache.has(pi) && PAGES[pi]) {
+      const page = buildPage(pi);
+      pageCache.set(pi, page);
+      for (const sl of PAGES[pi].slots || []) { const d = slots[sl.id].uid != null && byUid(slots[sl.id].uid); if (d) dock(d); }
+      predecode(page);
+    }
+    warmPages();
+  });
+}
+function buildPage(pi) {
+  const pg = PAGES[pi];
+  const page = document.createElement('div');
+  page.className = 'page ' + pg.kind + (pg.side ? ' rightside' : '');
+  page.dataset.pi = pi;
+  if (pg.kind === 'diskeyz') {
+    for (const [e, x, y, size, r] of DECOR[pi % 2]) {
+      page.insertAdjacentHTML('beforeend',
+        `<div class="decor" style="left:calc(var(--u)*${x});top:calc(var(--u)*${y});font-size:calc(var(--u)*${size});--r:${r}deg">${e}</div>`);
+    }
+    for (const { id, x, y } of pg.slots) {
+      const el = document.createElement('div');
+      el.className = 'slot';
+      el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
+      el.innerHTML = `<div class="ear"></div><div class="ring"></div>` +
+        `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>` +
+        `<div class="num">${pad2(id)}</div>` +
+        (SHINY[id] ? `<div class="sticker ${SHINY[id]}"></div>` : '');
+      page.appendChild(el);
+      slots[id].el = el;
+    }
+    page.insertAdjacentHTML('beforeend',
+      `<div class="pagenum" style="${pi % 2 ? 'right' : 'left'}:calc(var(--u)*18)">${11 + pi}</div>`);
+  } else if (pg.kind === 'coin') {
+    // muntenmap: ronde uitsparingen met het plaatje van de munt die erin hoort
+    for (const { id, x, y } of pg.slots) {
+      const el = document.createElement('div');
+      el.className = 'slot cpocket';
+      el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
+      el.innerHTML = `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div><div class="num">${id}</div>`;
+      page.appendChild(el);
+      slots[id].el = el;
+    }
+    page.insertAdjacentHTML('beforeend', `<div class="pagenum" style="${pi % 2 ? 'right' : 'left'}:calc(var(--u)*24)">${pg.from}–${pg.to}</div>`);
+  } else if (pg.kind === 'sheet') {
+    // doorzichtig insteekblad met vakjes; erachter een vel met de plaatjes
+    page.insertAdjacentHTML('beforeend', '<div class="rings"><i></i><i></i><i></i><i></i></div>');
+    for (const { id, x, y } of pg.slots) {
+      const el = document.createElement('div');
+      el.className = 'slot pocket';
+      el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
+      el.innerHTML = `<div class="plabel"><b>${id}</b><span>${MISSING.has(id) ? '' : nameOf(id)}</span></div>` +
+        (MISSING.has(id)
+          ? `<div class="hole none">?</div>`
+          : `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>`) +
+        `<div class="plastic"></div>`;
+      page.appendChild(el);
+      slots[id].el = el;
+    }
+    page.insertAdjacentHTML('beforeend',
+      `<div class="pagenum" style="${pi % 2 ? 'right' : 'left'}:calc(var(--u)*30)">${FLIPPOS.series[seriesOf(pg.from)].name} · ${pg.from}–${pg.to}</div>`);
+  }
+  return page;
+}
+
+// bladzijde uit de map halen; hij blijft bewaard (met zijn flippo's erin) voor de volgende keer
+function dropPage(el) { el?.remove(); }
+const pageLeaf = (side) => albumEl.querySelector(side ? '.leaf.right' : '.leaf.left');
+const leafPage = (side) => pageLeaf(side).querySelector(':scope > .page');
+// zet de twee bladzijden van een andere spread in de map (zonder de hele map opnieuw te bouwen)
+function setSpread(base) {
+  for (const side of [0, 1]) {
+    const cur = leafPage(side);
+    if (cur && +cur.dataset.pi === base + side) continue;
+    dropPage(cur);
+    pageLeaf(side).prepend(makePage(base + side));
+  }
+}
+
+// Een flippo die in de map zit wordt een kind van zijn vakje. (Vroeger lag hij los boven de map en
+// moest hij bij elke beweging verstopt en weer getoond worden: dat gaf geflikker.)
+function dock(d, force) {
+  if (d.slot == null) return;
+  if (force) d.sliding = false;
+  if (d.sliding || (drag && drag.d === d && drag.moved)) return;
+  const s = slots[d.slot];
+  d.el.classList.remove('anim', 'slidein', 'drag');
+  if (s.el) {
+    if (d.el.parentNode !== s.el) s.el.appendChild(d.el);
+    d.el.classList.add('docked');
+  } else d.el.remove();            // zijn bladzijde ligt nu niet in de map
+}
+const dockAll = (force) => discs.forEach((d) => dock(d, force));
+function undock(d) {
+  d.el.classList.remove('docked');
+  if (d.el.parentNode !== stage) stage.appendChild(d.el);
+}
+
+function buildAlbum() {
+  turn = null;
+  pageCache = new Map();
+  stage.querySelectorAll('.albumwrap').forEach((w) => w.remove());
   if (!L.single) curPage -= curPage % 2;
   const wrap = document.createElement('div');
   wrap.className = 'albumwrap';
@@ -371,60 +475,10 @@ function buildAlbum(hold = false) {
   const base = curPage - (curPage % 2);
   for (let p = 0; p < 2; p++) {
     if (p === 1) album.insertAdjacentHTML('beforeend', '<div class="spine"></div>');
-    const pg = PAGES[base + p];
-    const page = document.createElement('div');
-    page.className = 'page ' + pg.kind + (pg.side ? ' rightside' : '');
-    if (pg.kind === 'diskeyz') {
-      for (const [e, x, y, size, r] of DECOR[p]) {
-        page.insertAdjacentHTML('beforeend',
-          `<div class="decor" style="left:calc(var(--u)*${x});top:calc(var(--u)*${y});font-size:calc(var(--u)*${size});--r:${r}deg">${e}</div>`);
-      }
-      for (const { id, x, y } of pg.slots) {
-        const el = document.createElement('div');
-        el.className = 'slot';
-        el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
-        el.innerHTML = `<div class="ear"></div><div class="ring"></div>` +
-          `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>` +
-          `<div class="num">${pad2(id)}</div>` +
-          (SHINY[id] ? `<div class="sticker ${SHINY[id]}"></div>` : '');
-        page.appendChild(el);
-        slots[id].el = el;
-      }
-      page.insertAdjacentHTML('beforeend',
-        `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*18)">${11 + p}</div>`);
-    } else if (pg.kind === 'coin') {
-      // muntenmap: ronde uitsparingen met het plaatje van de munt die erin hoort
-      for (const { id, x, y } of pg.slots) {
-        const el = document.createElement('div');
-        el.className = 'slot cpocket';
-        el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
-        el.innerHTML = `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div><div class="num">${id}</div>`;
-        page.appendChild(el);
-        slots[id].el = el;
-      }
-      page.insertAdjacentHTML('beforeend', `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*24)">${pg.from}–${pg.to}</div>`);
-    } else if (pg.kind === 'sheet') {
-      // doorzichtig insteekblad met vakjes; erachter een vel met de plaatjes
-      page.insertAdjacentHTML('beforeend', '<div class="rings"><i></i><i></i><i></i><i></i></div>');
-      for (const { id, x, y } of pg.slots) {
-        const el = document.createElement('div');
-        el.className = 'slot pocket';
-        el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
-        el.innerHTML = `<div class="plabel"><b>${id}</b><span>${MISSING.has(id) ? '' : nameOf(id)}</span></div>` +
-          (MISSING.has(id)
-            ? `<div class="hole none">?</div>`
-            : `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>`) +
-          `<div class="plastic"></div>`;
-        page.appendChild(el);
-        slots[id].el = el;
-      }
-      page.insertAdjacentHTML('beforeend',
-        `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*30)">${FLIPPOS.series[seriesOf(pg.from)].name} · ${pg.from}–${pg.to}</div>`);
-    }
     // elk blad heeft een binnenkant (de pagina) en een buitenkant (voor- of achterkaft)
     const leaf = document.createElement('div');
     leaf.className = 'leaf ' + (p ? 'right' : 'left');
-    leaf.appendChild(page);
+    leaf.appendChild(makePage(base + p));
     leaf.insertAdjacentHTML('beforeend', p && SET.back
       ? `<div class="cover backcover imgcover" style="background-image:url(${SET.back})"><div class="bc-count"></div></div>`
       : p
@@ -437,14 +491,18 @@ function buildAlbum(hold = false) {
   // tikken op een hoekje slaat ook om (slepen hoeft niet)
   album.querySelector('.curl.prev').addEventListener('click', (e) => { e.stopPropagation(); turnPage(-1); });
   album.querySelector('.curl.next').addEventListener('click', (e) => { e.stopPropagation(); turnPage(1); });
-  // dikte van de dichte map: een stapel laagjes (het pak bladzijden) tussen achter- en voorkaft
+  // dikte van de dichte map: een stapel randjes (het pak bladzijden) tussen achter- en voorkaft
   let slabs = '';
   for (let z = 1.5; z < BOOK_T * L.u; z += 1.5) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
   album.insertAdjacentHTML('beforeend', slabs);
-  if (hold && oldWrap) wrap.style.visibility = 'hidden';
   stage.prepend(wrap);
   applyAlbumState(true);
   updateCount();
+  setTimeout(() => {
+    albumEl.querySelectorAll('.page').forEach(predecode);
+    if (!coverImgs.length) for (const src of [SET.cover, SET.back, `${SET.dir}/inside.jpg`]) { if (!src) continue; const im = new Image(); im.src = src; im.decode?.().catch(() => {}); coverImgs.push(im); }
+    warmPages();
+  }, 200);
 }
 
 // na wisselen tussen liggend/staand: losse flippo's meeschalen
@@ -595,6 +653,7 @@ function applyAlbumState(instant) {
   const open = albumState === 'open';
   albumEl.classList.toggle('closed', !open);
   albumEl.classList.toggle('closing', !open && !instant);   // alleen bij echt dichtslaan, niet bij laden
+  if (!instant) albumEl.dataset.from = albumEl.classList.contains('turned') ? 'back' : albumEl.classList.contains('closed') ? 'front' : 'open';
   albumEl.classList.toggle('turned', albumState === 'back');
   albumEl.classList.toggle('single', !!L.single);
   albumEl.classList.toggle('p0', curPage % 2 === 0);
@@ -602,20 +661,13 @@ function applyAlbumState(instant) {
   const step = L.single ? 1 : 2;
   albumEl.querySelector('.curl.prev').hidden = !open || curPage - step < 0;
   albumEl.querySelector('.curl.next').hidden = !open || curPage + step >= PAGES.length;
-  // flippo's in vakjes die je niet ziet zijn verstopt; ze komen pas terug als het blad ligt
-  clearTimeout(applyAlbumState.t);
-  const set = () => discs.forEach((d) => d.el.classList.toggle('stowed', d.slot != null && !slotOpen(d.slot)));
-  if (instant) set();
-  else {
-    discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
-    applyAlbumState.t = setTimeout(set, open ? 550 : 0);
+  dockAll(!instant);
+  if (!instant) {
     // omgekrulde hoekjes pas tonen als de kaft helemaal openligt
-    if (open) {
-      const el = albumEl;
-      el.classList.add('opening');
-      clearTimeout(applyAlbumState.o);
-      applyAlbumState.o = setTimeout(() => el.classList.remove('opening'), 750);
-    }
+    const el = albumEl;
+    el.classList.toggle('opening', open);
+    clearTimeout(applyAlbumState.o);
+    applyAlbumState.o = setTimeout(() => el.classList.remove('opening', 'closing'), 750);
   }
 }
 
@@ -623,99 +675,104 @@ function setPage(p) {
   if (albumState !== 'open') return;
   p = Math.max(0, Math.min(PAGES.length - 1, p));
   if (!L.single) p -= p % 2;
+  if (turn && turn.to === p) return;
+  flushTurn();
   if (p === curPage) return;
-  const old = curPage, oldSnap = snapPages();
-  curPage = p;
-  swapAlbum();
-  animateTurn(old, p, oldSnap);
-  snd('page');
-  save();
+  if (startTurn(p, false)) snd('page');
 }
-
-// bouwt de map voor de nieuwe bladzijde op, maar laat op het scherm nog alles zoals het was
-function swapAlbum() {
-  const stowed = discs.map((d) => d.el.classList.contains('stowed'));
-  buildAlbum(true);
-  discs.forEach((d, i) => d.el.classList.toggle('stowed', stowed[i]));
-}
+const turnPage = (dir) => setPage((turn ? turn.to : curPage) + dir * (L.single ? 1 : 2));
 
 // ---------- bladzijde omslaan ----------
-// Momentopname van de bladzijden die nu in de map zitten (met de flippo's die erin zitten),
-// als html per bladzijdenummer. Daarmee tekenen we het blad dat omslaat.
-function snapPages() {
-  const base = curPage - (curPage % 2), out = {};
-  albumEl.querySelectorAll('.page').forEach((el, k) => {
-    const pi = base + k;
-    let html = el.outerHTML.replace(/<img /g, '<img decoding="sync" ');
-    for (const sl of PAGES[pi].slots || []) {
-      if (slots[sl.id].uid == null) continue;
-      html += `<img class="ghost" decoding="sync" src="${imgOf(sl.id)}" alt="" style="left:calc(var(--u)*${sl.x - DISC_R});top:calc(var(--u)*${sl.y - DISC_R});width:calc(var(--u)*${DISC_R * 2});height:calc(var(--u)*${DISC_R * 2})">`;
-    }
-    out[pi] = html;
-  });
-  return out;
-}
+// Het blad dat omslaat bestaat uit de échte bladzijden (geen kopieën): de voorkant is de oude
+// bladzijde, de achterkant de nieuwe. Na afloop liggen dezelfde elementen op hun plek in de map,
+// dus er hoeft niets gewisseld of opnieuw getekend te worden.
+let turn = null;
+const flushTurn = () => { if (turn) turn.finish(); };
 
-function animateTurn(from, to, oldSnap, manual) {
-  const W = PAGE_W * L.u, H = PAGE_H * L.u, fwd = to > from, N = 6, segW = W / N;
-  const newSnap = snapPages();
-  clearTimeout(animateTurn.t);
-  albumEl.querySelector('.turnlayer')?.remove();
-  const clone = (html, off) => `<div class="pgclone" style="left:${-off}px;width:${W}px;height:${H}px">${html}</div>`;
-  const flat = (html, x) => `<div class="tstatic" style="left:${x}px;width:${W}px;height:${H}px">${clone(html, 0)}</div>`;
-  // het omslaande blad bestaat uit stroken die elk een beetje extra buigen: zo krijgt het blad een boog
-  const hinge = fwd || L.single;   // scharniert het blad om zijn linkerrand?
-  const strips = (front, back, i = 0) => {
-    if (i === N) return '';
-    const near = i * segW, far = W - (i + 1) * segW;      // afstand tot de rug
-    const pos = i === 0 ? (hinge ? 0 : W - segW) : (hinge ? segW : -segW);
-    return `<div class="tseg" style="left:${pos}px;width:${segW + 0.6}px;height:${H}px;transform-origin:${hinge ? 0 : 100}% 50%">` +
-      `<div class="tf">${clone(front, hinge ? near : far)}</div>` +
-      (back ? `<div class="tf tback">${clone(back, hinge ? far : near)}</div>` : '') +
-      strips(front, back, i + 1) + `</div>`;
-  };
-  const layer = document.createElement('div');
-  layer.className = 'turnlayer ' + (fwd ? 'fwd' : 'bwd');
-  const rightX = W + SPINE * L.u;
-  layer.style.setProperty('--gap', SPINE * L.u + 'px');
-  if (L.single) {
-    // één bladzijde in beeld: het blad draait weg over de linkerrand (of komt daarvandaan terug)
-    layer.classList.add('one');
-    layer.innerHTML = fwd
-      ? flat(newSnap[to], 0) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[from], '')}</div>`   // eronder de nieuwe bladzijde mét zijn flippo's
-      : flat(oldSnap[from], 0) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(newSnap[to], '')}</div>`;
+function startTurn(to, manual) {
+  flushTurn();
+  if (to < 0 || to >= PAGES.length || to === curPage || albumState !== 'open') return null;
+  const from = curPage, fwd = to > from, single = !!L.single;
+  const W = PAGE_W * L.u, gap = SPINE * L.u;
+  const ob = from - (from % 2), nb = to - (to % 2), same = ob === nb;
+  const leafL = pageLeaf(0), leafR = pageLeaf(1), oldL = leafPage(0), oldR = leafPage(1);
+  const newL = same ? oldL : makePage(nb), newR = same ? oldR : makePage(nb + 1);
+  const sheet = document.createElement('div');
+  sheet.className = 'turnsheet';   // (niet 'sheet': zo heet het insteekblad zelf al)
+  let frames, commit, rollback;
+  const parity = (p) => { albumEl.classList.toggle('p0', p % 2 === 0); albumEl.classList.toggle('p1', p % 2 === 1); };
+  curPage = to;
+  if (!single && fwd) {
+    // rechterblad slaat naar links; eronder ligt de nieuwe rechterbladzijde al klaar
+    sheet.style.left = W + gap + 'px';
+    sheet.style.transformOrigin = '0 50%';
+    leafR.prepend(newR);
+    newL.classList.add('flipside');
+    sheet.append(oldR, newL);
+    frames = [{ transform: 'translateX(0) rotateY(0deg) skewY(0deg)' }, { transform: `translateX(${-gap / 2}px) rotateY(-90deg) skewY(-3.5deg)` }, { transform: `translateX(${-gap}px) rotateY(-180deg) skewY(0deg)` }];
+    commit = () => { newL.classList.remove('flipside'); dropPage(oldL); dropPage(oldR); leafL.prepend(newL); };
+    rollback = () => { newL.classList.remove('flipside'); leafR.prepend(oldR); dropPage(newL); dropPage(newR); };
+  } else if (!single) {
+    // linkerblad slaat naar rechts
+    sheet.style.left = '0px';
+    sheet.style.transformOrigin = '100% 50%';
+    leafL.prepend(newL);
+    newR.classList.add('flipside');
+    sheet.append(oldL, newR);
+    frames = [{ transform: 'translateX(0) rotateY(0deg) skewY(0deg)' }, { transform: `translateX(${gap / 2}px) rotateY(90deg) skewY(3.5deg)` }, { transform: `translateX(${gap}px) rotateY(180deg) skewY(0deg)` }];
+    commit = () => { newR.classList.remove('flipside'); dropPage(oldL); dropPage(oldR); leafR.prepend(newR); };
+    rollback = () => { newR.classList.remove('flipside'); leafL.prepend(oldL); dropPage(newL); dropPage(newR); };
   } else {
-    const ob = from - (from % 2), nb = to - (to % 2);
-    layer.innerHTML = fwd
-      ? flat(newSnap[nb + 1], rightX) + flat(oldSnap[ob], 0) + `<div class="turner" style="left:${rightX}px;width:${W}px;height:${H}px;transform-origin:0 50%">${strips(oldSnap[ob + 1], newSnap[nb])}</div>`
-      : flat(newSnap[nb], 0) + flat(oldSnap[ob + 1], rightX) + `<div class="turner" style="left:0;width:${W}px;height:${H}px;transform-origin:100% 50%">${strips(oldSnap[ob], newSnap[nb + 1])}</div>`;
+    // één bladzijde in beeld: het blad draait om zijn linkerrand weg, of komt daarvandaan terug
+    sheet.style.left = '0px';
+    sheet.style.transformOrigin = '0 50%';
+    const oldEl = from % 2 ? oldR : oldL, oldLeaf = from % 2 ? leafR : leafL;
+    const newEl = to % 2 ? newR : newL, newLeaf = to % 2 ? leafR : leafL;
+    const away = [{ transform: 'rotateY(0deg) skewY(0deg)', opacity: 1 }, { transform: 'rotateY(-55deg) skewY(-3deg)', opacity: 1, offset: 0.6 }, { transform: 'rotateY(-96deg) skewY(0deg)', opacity: 0 }];
+    if (fwd) {
+      sheet.append(oldEl);
+      if (!same) { dropPage(from % 2 ? oldL : oldR); leafL.prepend(newL); leafR.prepend(newR); }
+      parity(to);                       // de nieuwe bladzijde ligt er meteen onder
+      frames = away;
+      commit = () => { if (same) oldLeaf.prepend(oldEl); else dropPage(oldEl); };
+      rollback = () => {
+        // alleen de andere bladzijde van de oude spread opnieuw maken; de oude zelf komt terug uit het blad
+        if (!same) { dropPage(newL); dropPage(newR); (from % 2 ? leafL : leafR).prepend(makePage(from % 2 ? ob : ob + 1)); }
+        oldLeaf.prepend(oldEl);
+      };
+    } else {
+      sheet.append(newEl);              // komt over de oude bladzijde heen te liggen
+      frames = [...away].reverse().map((f, k) => ({ ...f, offset: [0, 0.4, 1][k] }));
+      commit = () => { if (same) newLeaf.prepend(newEl); else { dropPage(oldL); dropPage(oldR); leafL.prepend(newL); leafR.prepend(newR); } };
+      rollback = () => { if (same) newLeaf.prepend(newEl); else { dropPage(newL); dropPage(newR); } };
+    }
   }
-  albumEl.appendChild(layer);
-  // Pas wisselen als alle plaatjes van de nieuwe map en het omslaande blad getekend kunnen worden.
-  const wrap = albumEl.parentNode, oldWrap = stage.querySelector('.albumwrap.oldwrap');
-  const anims = manual ? [] : layer.getAnimations({ subtree: true });
-  anims.forEach((a) => a.pause());
-  let shown = false;
-  const reveal = () => {
-    if (shown) return;
-    shown = true;
-    oldWrap?.remove();
-    wrap.style.visibility = '';
-    if (!layer.isConnected) return applyAlbumState(true);   // het omslaan was al voorbij
-    // de echte flippo's even weg; de momentopname laat ze zien tot het blad ligt
-    discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
-    anims.forEach((a) => a.play());
-    if (!manual) animateTurn.t = setTimeout(() => { layer.remove(); applyAlbumState(true); }, 720);
+  // lichte schaduw over het blad terwijl het omhoog komt
+  const shades = [...sheet.children].map((pgEl) => { const sh = document.createElement('i'); sh.className = 'shade'; pgEl.appendChild(sh); return sh; });
+  albumEl.appendChild(sheet);
+  albumEl.classList.add('turning');
+  const opt = { duration: TURN_MS, fill: 'both' };
+  const anims = [sheet.animate(frames, { ...opt, easing: 'cubic-bezier(.45, .05, .4, 1)' }),
+    ...shades.map((sh) => sh.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], opt))];
+  const me = turn = {
+    from, to, anims, ok: true,
+    finish() {
+      if (turn !== me) return;
+      turn = null;
+      anims.forEach((a) => { a.onfinish = null; a.cancel(); });
+      shades.forEach((sh) => sh.remove());
+      if (me.ok) commit(); else { rollback(); curPage = from; }
+      sheet.remove();
+      albumEl.classList.remove('turning');
+      applyAlbumState(true);
+      save();
+      setTimeout(warmPages, 60);
+    },
   };
-  if (wrap.style.visibility !== 'hidden') reveal();
-  else {
-    Promise.all([...wrap.querySelectorAll('img')].map((im) => im.decode().catch(() => {}))).then(reveal);
-    setTimeout(reveal, 400);
-  }
-  return layer;
+  anims[0].onfinish = () => me.finish();
+  if (manual) anims.forEach((a) => a.pause());
+  return me;
 }
-
-const turnPage = (dir) => setPage(curPage + dir * (L.single ? 1 : 2));
 
 // alle losse flippo's of munten vallen stuiterend op tafel, met gekletter
 function rainDiscs(wait = 0) {
@@ -737,6 +794,7 @@ function rainDiscs(wait = 0) {
 
 function setAlbum(state) {
   if (state === albumState) return;
+  flushTurn();
   if (state === 'open') rainDiscs(250);
   albumState = state;
   applyAlbumState(false);
@@ -749,26 +807,29 @@ function putInSlot(d, quiet) {
   const s = slots[d.id];
   d.slot = d.id; s.uid = d.uid;
   d.x = s.x; d.y = s.y; d.rot = 0;
+  d.sliding = true;                      // nog onderweg; daarna wordt hij deel van de bladzijde
+  const token = d.slideT = (d.slideT || 0) + 1;
+  const live = () => d.slideT === token && d.slot === d.id && d.sliding;
+  const done = () => { if (!live()) return; d.sliding = false; render(d); dock(d); };
   if (FLIPPO) {
     // eerst boven het hoesje hangen, dan van boven naar beneden erin schuiven
     d.y = s.y - L.R * 2.05;
-    d.sliding = true;
     animate([d], 170);
     render(d);
     setTimeout(() => {
-      if (d.slot !== d.id) { d.sliding = false; return; }   // intussen weer opgepakt
+      if (!live()) return;
       d.el.classList.add('slidein');
       d.y = slots[d.id].y;
       render(d);
       if (!quiet) snd('slot');
-      setTimeout(() => { d.el.classList.remove('slidein'); d.sliding = false; render(d); }, 400);
+      setTimeout(done, 400);
     }, 180);
   } else {
     animate([d]);
     render(d);
     if (!quiet) { snd('slot'); pop(d); }
+    setTimeout(done, 320);
   }
-  if (!slotOpen(d.id)) setTimeout(() => d.slot != null && !slotOpen(d.slot) && d.el.classList.add('stowed'), FLIPPO ? 640 : 320);
   updateCount();
 }
 
@@ -777,8 +838,10 @@ function leaveSlot(d) {
   slots[d.slot].uid = null;
   d.slot = null;
   d.sliding = false;
+  d.slideT = (d.slideT || 0) + 1;
   d.el.classList.remove('slidein');
   d.el.classList.remove('stowed');
+  undock(d);
   d.z = ++zTop;
   updateCount();
 }
