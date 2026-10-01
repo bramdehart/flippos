@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flippo's</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="bar">
+  <strong class="logo">Flippo's</strong>
+  <span id="count" class="count">0 / 30 in de map</span>
+  <span class="spacer"></span>
+  <button id="btn-album" data-short="In map" title="Stop alle flippo's in de map">📖 <span>Alles in de map</span></button>
+  <button id="btn-close" data-short="Dicht" title="Klap de map dicht of open">📕 <span>Map dichtklappen</span></button>
+  <button id="btn-turn" data-short="Omdraaien" title="Draai de dichte map om">🔄 <span>Map omdraaien</span></button>
+  <button id="btn-table" data-short="Op tafel" title="Gooi alle flippo's op tafel">🎲 <span>Op tafel gooien</span></button>
+  <button id="btn-loose" data-short="Losmaken" title="Haal alle bouwsels uit elkaar">✂️ <span>Alles losmaken</span></button>
+  <button id="btn-3d" data-short="3D" title="Bekijk je bouwwerk in 3D">🧊 <span>3D bekijken</span></button>
+  <button id="btn-pack" data-short="Zakje" title="Krijg 3 extra flippo's">🎁 <span>Zakje openen</span></button>
+  <button id="btn-sound" data-short="Geluid" title="Geluid aan/uit">🔊</button>
+</header>
+<main id="table">
+  <div id="stage"></div>
+</main>
+<footer id="hint">
+  Sleep een flippo naar zijn vakje &nbsp;·&nbsp; Sleep twee flippo's tegen elkaar om ze vast te klikken &nbsp;·&nbsp;
+  Tik = omdraaien &nbsp;·&nbsp; Dubbeltik = losmaken &nbsp;·&nbsp; Scrollen = draaien &nbsp;·&nbsp; Knijpen of ctrl+scrollen = zoomen
+</footer>
+<div id="view3d">
+  <div class="v3-title"></div>
+  <button class="v3-close" title="Sluiten">✕</button>
+  <div class="scene"><div class="world"></div></div>
+  <div class="v3-hint">Sleep om te draaien · knijp of scroll om te zoomen</div>
+</div>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
