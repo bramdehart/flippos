@@ -1,0 +1,246 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  font-family: "Avenir Next", "Nunito", "Trebuchet MS", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* vast beeld van 1600 x 900 dat meeschaalt met het venster */
+#frame { position: fixed; inset: 0; display: grid; place-items: center; }
+#stage {
+  position: relative;
+  flex: none;
+  width: 1600px;
+  height: 900px;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  background: #b9b2a3;
+}
+.scene { position: absolute; inset: 0; overflow: hidden; }
+.cam { position: absolute; inset: 0; }
+
+/* het gespikkelde tafelblad van de site */
+.table {
+  position: absolute;
+  inset: -40px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .22) 0 1px, transparent 2px) 0 0 / 37px 41px,
+    radial-gradient(circle at 70% 60%, rgba(60, 50, 40, .18) 0 1px, transparent 2px) 0 0 / 53px 47px,
+    radial-gradient(circle at 40% 80%, rgba(255, 255, 255, .15) 0 2px, transparent 3px) 0 0 / 89px 97px,
+    radial-gradient(ellipse at 50% 40%, #cfc8b9, #a59d8d);
+}
+.blue { position: absolute; inset: -40px; background: radial-gradient(ellipse at 50% 42%, #4a8fe0, #0f2a5c 78%); }
+
+/* draaiende stralen achter de grote momenten */
+.rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2600px;
+  height: 2600px;
+  margin: -1300px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--c1, rgba(255, 225, 0, .34)) 0 9deg, transparent 9deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 12%, transparent 62%);
+  mask: radial-gradient(circle, #000 12%, transparent 62%);
+}
+
+/* stripwoorden: geel met dikke zwarte rand, een beetje scheef */
+.word {
+  position: absolute;
+  transform-origin: 50% 50%;
+  white-space: nowrap;
+  font-weight: 900;
+  font-style: italic;
+  line-height: .95;
+  text-align: center;
+  color: var(--col, #ffe100);
+  -webkit-text-stroke: var(--st, 14px) #111;
+  paint-order: stroke fill;
+  text-shadow: 0 .09em 0 rgba(0, 0, 0, .28);
+  z-index: 50;
+  pointer-events: none;
+}
+.burst {
+  position: absolute;
+  z-index: 49;
+  background: var(--col, #e8212b);
+  clip-path: polygon(50% 0, 59% 22%, 79% 7%, 76% 31%, 100% 28%, 85% 47%, 100% 62%, 78% 66%, 86% 90%, 63% 79%, 55% 100%, 43% 80%, 21% 95%, 26% 70%, 0 68%, 17% 50%, 0 30%, 24% 31%, 18% 8%, 40% 22%);
+  filter: drop-shadow(0 8px 0 rgba(0, 0, 0, .25));
+}
+.sticker {
+  position: absolute;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8212b;
+  color: #fff;
+  font-weight: 900;
+  font-style: italic;
+  border: 6px solid #fff;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .25);
+}
+
+.fl { position: absolute; filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .45)); }
+.fl.round { border-radius: 50%; }
+.chip { position: absolute; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .4)); }
+
+/* dichte map met rug */
+.book {
+  position: absolute;
+  padding-left: 5%;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #a89650, #e6d68c 30%, #f4e9ae 50%, #e6d68c 70%, #a89650) 0 0 / 5.5% 100% no-repeat, #c9b76a;
+  box-shadow: 0 0 0 5px #c9b76a, 0 22px 34px rgba(0, 0, 0, .45);
+}
+.book.dk { background: linear-gradient(90deg, #1f5ea8, #5aa3e6 30%, #7fc0f5 50%, #5aa3e6 70%, #1f5ea8) 0 0 / 5.5% 100% no-repeat, #2f79c9; box-shadow: 0 0 0 5px #2f79c9, 0 22px 34px rgba(0, 0, 0, .45); }
+.book img { display: block; width: 100%; height: 100%; border-radius: 0 9px 9px 0; }
+
+/* opengeslagen map */
+.spread { position: absolute; transform-style: preserve-3d; }
+.pg {
+  position: absolute;
+  top: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 0 5px #c9b76a, 0 18px 30px rgba(0, 0, 0, .4);
+  overflow: hidden;
+  background: #fbfaf4;
+}
+.leaf { position: absolute; top: 0; transform-style: preserve-3d; }
+.leaf > .pg { left: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.leaf > .pg.bk { transform: rotateY(180deg); }
+.pg.img { background: center / 100% 100% no-repeat; }
+.pg .ttl { position: absolute; top: 2.2%; font-size: 15px; font-weight: 800; color: #8a8470; }
+.pocket { position: absolute; }
+.pocket b {
+  position: absolute;
+  left: 0;
+  top: -19%;
+  min-width: 30%;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--c);
+  color: #fff;
+  font-size: 12px;
+  line-height: 17px;
+  text-align: center;
+}
+.pocket .ghost { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .25; filter: saturate(.5); }
+.pocket .in { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pocket::after {
+  content: "";
+  position: absolute;
+  inset: -3%;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, .1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .5), transparent 35%, transparent 75%, rgba(255, 255, 255, .3));
+}
+.ringholes { position: absolute; top: 0; bottom: 0; width: 7%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; padding: 12% 0; }
+.ringholes i { width: 15px; height: 15px; border-radius: 50%; background: #6d6a60; box-shadow: 0 0 0 3px #e9e6da; }
+.backface {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background: radial-gradient(circle, rgba(60, 50, 20, .12) 0 2px, transparent 3px) 0 0 / 23px 19px, #ead98b;
+}
+
+/* de zak chips */
+.bag { position: absolute; filter: drop-shadow(0 26px 22px rgba(0, 0, 0, .5)); }
+.bag .p {
+  position: absolute;
+  inset: 0;
+  background: url(../img/flippo-1/chips.jpg) center / 100% 100% no-repeat;
+  -webkit-mask: var(--bagmask) center / 100% 100% no-repeat;
+  mask: var(--bagmask) center / 100% 100% no-repeat;
+}
+.bag .p::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 34% 26% at 30% 27%, rgba(255, 255, 255, .55), transparent 70%),
+    linear-gradient(90deg, rgba(0, 0, 0, .34), transparent 20%, rgba(255, 255, 255, .1) 45%, transparent 76%, rgba(0, 0, 0, .38)),
+    linear-gradient(180deg, rgba(0, 0, 0, .3), transparent 13%, transparent 85%, rgba(0, 0, 0, .34));
+}
+
+/* 3D */
+.world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+.d3 { position: absolute; transform-style: preserve-3d; }
+.d3 img { position: absolute; inset: 0; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.d3 .e { -webkit-backface-visibility: visible; backface-visibility: visible; filter: brightness(0) invert(.82); }
+
+.url {
+  position: absolute;
+  z-index: 60;
+  padding: 14px 44px 18px;
+  border-radius: 99px;
+  background: #111;
+  color: #ffe100;
+  font-size: 66px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, .25);
+  white-space: nowrap;
+}
+.small {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  z-index: 60;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #2f2a20;
+}
+.flash { position: absolute; inset: 0; z-index: 90; background: #fff; pointer-events: none; }
+
+/* startscherm */
+#start {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 26px;
+  background: radial-gradient(ellipse at 50% 40%, #cfc8b9, #a59d8d);
+  color: #2f2a20;
+}
+#start[hidden] { display: none; }
+.start-logo {
+  font-size: clamp(60px, 13vw, 170px);
+  font-weight: 900;
+  font-style: italic;
+  color: #ffe100;
+  -webkit-text-stroke: clamp(8px, 1.4vw, 18px) #111;
+  paint-order: stroke fill;
+  transform: rotate(-4deg);
+  text-shadow: 0 .08em 0 rgba(0, 0, 0, .25);
+}
+#play {
+  font: inherit;
+  font-size: clamp(20px, 3vw, 34px);
+  font-weight: 900;
+  color: #fff;
+  background: #e8212b;
+  border: 6px solid #fff;
+  border-radius: 99px;
+  padding: 14px 44px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .25);
+}
+#play:disabled { opacity: .6; cursor: default; }
+#play:not(:disabled):hover { transform: scale(1.06) rotate(-2deg); }
+#start p { margin: 0; font-weight: 700; }
+
+/* na afloop: de eindkaart blijft zichtbaar, met alleen een knopje rechtsboven */
+#start.again { inset: 18px 18px auto auto; background: none; display: block; }
+#start.again .start-logo, #start.again p { display: none; }
+#start.again #play { font-size: 18px; padding: 8px 22px; border-width: 4px; }
