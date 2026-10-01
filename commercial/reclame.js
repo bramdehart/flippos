@@ -3,7 +3,8 @@
 
 const stage = document.getElementById('stage');
 const qs = new URLSearchParams(location.search);
-const DEBUG = qs.has('s');                 // ?s=<scène>&p=<ms>: één scène stilzetten op een moment (zonder geluid)
+const EXPORT = qs.has('export');           // ?export: beeld voor beeld en geluid in één keer laten uitrekenen (voor de mp4)
+const DEBUG = qs.has('s') || EXPORT;       // ?s=<scène>&p=<ms>: één scène stilzetten op een moment (zonder geluid)
 const DEBUG_P = +qs.get('p') || 0;
 
 const IMG = '../img/';
@@ -486,7 +487,7 @@ const TOTAL = 80.6;
 // ---------- geluid ----------
 function sfx(name, ms = 0) {
   if (!audio) return;
-  const { ctx, out } = audio, t = ctx.currentTime + ms / 1000;
+  const { ctx, out } = audio, t = (audio.offline ? audio.base + vt / 1000 : ctx.currentTime) + ms / 1000;
   const osc = (type, f0, f1, dur, vol, when = t) => {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, when); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), when + dur);
@@ -554,19 +555,72 @@ function play() {
   }, wall0 - performance.now() + TOTAL * 1000);
 }
 
-if (DEBUG) {
-  document.getElementById('start').hidden = true;
-  const s = SCENES[+qs.get('s')];
-  s.fn();
+// één scène opbouwen en stilzetten op p ms na het begin
+function renderScene(idx, p) {
+  seed = 7 + idx; vt = 0; pending = []; recorded.length = 0;
+  SCENES[idx].fn();
   // uitgestelde acties in volgorde uitvoeren tot het gevraagde moment
   for (;;) {
     pending.sort((a, b) => a[0] - b[0]);
-    const i = pending.findIndex((p) => p[0] <= DEBUG_P);
-    if (i < 0) break;
-    const [ms, fn] = pending.splice(i, 1)[0];
+    const k = pending.findIndex((q) => q[0] <= p);
+    if (k < 0) break;
+    const [ms, fn] = pending.splice(k, 1)[0];
     vt = ms; fn();
   }
-  for (const [an, start] of recorded) { try { an.pause(); an.currentTime = Math.max(0, DEBUG_P - start); } catch { /* al klaar */ } }
+  for (const [an, start] of recorded) { try { an.pause(); an.currentTime = Math.max(0, p - start); } catch { /* al klaar */ } }
+}
+
+if (EXPORT) {
+  document.getElementById('start').hidden = true;
+  // beeld op tijdstip T (seconden)
+  window.__seek = async (T) => {
+    let idx = 0;
+    SCENES.forEach((sc, k) => { if (sc.t <= T) idx = k; });
+    renderScene(idx, (T - SCENES[idx].t) * 1000);
+    await Promise.all([...stage.querySelectorAll('img')].map((im) => (im.complete ? im.decode().catch(() => {}) : new Promise((r) => { im.onload = im.onerror = r; }))));
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  };
+  // het hele geluidsspoor (muziek, stem, effecten) vooraf uitrekenen; geeft een wav in stukken base64 terug
+  window.__audio = async () => {
+    const a = await loadAudio();
+    const SR = 44100, off = new OfflineAudioContext(2, Math.ceil(SR * (TOTAL + .6)), SR);
+    const out = off.createGain(); out.gain.value = .5; out.connect(off.destination);
+    const mg = off.createGain(); mg.gain.value = .3; mg.connect(off.destination);
+    const ms = off.createBufferSource(); ms.buffer = a.music; ms.connect(mg); ms.start(0);
+    const vg = off.createGain(); vg.gain.value = 1.25; vg.connect(off.destination);
+    for (const sc of SCENES) {
+      if (!sc.vo) continue;
+      const b = a.bufs[sc.vo[0]], st = sc.t + sc.vo[1];
+      const src = off.createBufferSource(); src.buffer = b; src.connect(vg); src.start(st);
+      mg.gain.setTargetAtTime(.17, st - .05, .05);
+      mg.gain.setTargetAtTime(.3, st + b.duration, .15);
+    }
+    mg.gain.setTargetAtTime(.42, 73, .3);
+    mg.gain.setTargetAtTime(0, TOTAL - .3, .12);
+    // elke scène helemaal doorlopen zodat alle geluidseffecten op hun tijdstip worden ingepland
+    SCENES.forEach((sc, k) => {
+      audio = { ctx: off, out, noise: a.noise, bufs: a.bufs, offline: true, base: sc.t };
+      renderScene(k, 1e9);
+    });
+    audio = null; stage.innerHTML = '';
+    const buf = await off.startRendering(), L = buf.getChannelData(0), R = buf.getChannelData(1), n = buf.length;
+    const wav = new DataView(new ArrayBuffer(44 + n * 4));
+    const str = (o, t) => { for (let q = 0; q < t.length; q++) wav.setUint8(o + q, t.charCodeAt(q)); };
+    str(0, 'RIFF'); wav.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 2, true);
+    wav.setUint32(24, SR, true); wav.setUint32(28, SR * 4, true); wav.setUint16(32, 4, true); wav.setUint16(34, 16, true); str(36, 'data'); wav.setUint32(40, n * 4, true);
+    for (let q = 0; q < n; q++) {
+      wav.setInt16(44 + q * 4, Math.max(-1, Math.min(1, L[q])) * 32767, true);
+      wav.setInt16(46 + q * 4, Math.max(-1, Math.min(1, R[q])) * 32767, true);
+    }
+    const bytes = new Uint8Array(wav.buffer), chunks = [];
+    for (let o = 0; o < bytes.length; o += 3 * 262144) { let bin = ''; const part = bytes.subarray(o, o + 3 * 262144); for (let q = 0; q < part.length; q += 8192) bin += String.fromCharCode.apply(null, part.subarray(q, q + 8192)); chunks.push(btoa(bin)); }
+    window.__wav = chunks;
+    return chunks.length;
+  };
+  window.__total = TOTAL;
+} else if (DEBUG) {
+  document.getElementById('start').hidden = true;
+  renderScene(+qs.get('s'), DEBUG_P);
 } else {
   const btn = document.getElementById('play');
   loadAudio().then((a) => {
