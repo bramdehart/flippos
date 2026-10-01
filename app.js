@@ -1014,7 +1014,7 @@ $('#btn-sweep').onclick = () => {
 const packH = () => (L.mode === 'p' ? 760 : 500) * (FLIPPO ? 1.1 : 1);
 // de zak op tafel is even groot als wanneer hij in het midden staat, en steekt een stuk buiten beeld
 function sizePackButton() {
-  const btn = $('#btn-pack'), h = packH() * L.k;
+  const btn = $('#btn-pack'), h = packH() * L.k * (FLIPPO ? 1 : 0.72);   // de kleine zakjes liggen wat kleiner in de hoek; de zak chips op ware grootte
   btn.style.height = h + 'px';
   btn.style.left = -h * SET.packRatio * 0.2 + 'px';
   btn.style.bottom = -h * 0.3 + 'px';

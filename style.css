@@ -1458,3 +1458,19 @@ html, body { -webkit-touch-callout: none; }
   box-shadow: 0 2px 5px rgba(0, 0, 0, .25);
 }
 #btn-home:hover { transform: scale(1.1); }
+
+/* carrousel: mappen liggen half over elkaar, de gekozen map ligt bovenop en is groter */
+.ch-card { position: relative; z-index: 1; scale: .7; opacity: .75; }
+.ch-card.on, .ch-card.picked { z-index: 3; scale: 1.08; opacity: 1; }
+.ch-card b, .ch-card span, .ch-card u, .ch-card em { transition: opacity .25s; }
+.ch-card:not(.on):not(.picked) :is(b, span, u, em) { opacity: 0; }
+.ch-card:not(.on) .ch-book { filter: brightness(.86); }
+.ch-card .ch-book { transition: transform .25s, filter .3s; }
+@media (min-width: 641px) {
+  .ch-card + .ch-card { margin-left: calc(var(--cw) * -.34); }
+  .ch-list { padding-top: 46px; padding-bottom: 34px; }
+}
+@media (max-width: 640px) {
+  .ch-card + .ch-card, .ch-card:nth-child(3) + .ch-card { margin-left: -24vw; }
+  .ch-list { padding-top: 44px; padding-bottom: 30px; }
+}
