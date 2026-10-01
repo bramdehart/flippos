@@ -5,12 +5,11 @@
 
 > Gemaakt voor mijn neefjes, met foto's van eigen map en flippo's. Dit is geen officieel product: Diskeyz is een spaaractie van Albert Heijn met figuren van Disney en Pixar, de flippo's zijn van Smiths met figuren van Warner Bros. De Pokémon-munten zijn van Nintendo; de plaatjes daarvan komen van [LastDodo](https://www.lastdodo.nl/nl/areas/1407079-pokemon-munten). De plaatjes van de Smiths-flippo's komen van [milkcapmania.co.uk](https://www.milkcapmania.co.uk/Flippos/).
 
-
 Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzamel ze allemaal en klik ze in elkaar tot een bouwwerk.
 
-https://github.com/user-attachments/assets/7c88f2ad-2a1d-4293-9709-76ffd41c8971
-
 **Spelen: [flippos.bramdehart.nl](https://flippos.bramdehart.nl)** · Broncode: [github.com/bramdehart/flippos](https://github.com/bramdehart/flippos)
+
+https://github.com/user-attachments/assets/7c88f2ad-2a1d-4293-9709-76ffd41c8971
 
 ![De mappen liggen over elkaar op tafel; de gekozen map ligt bovenop](docs/keuze.jpg)
 
