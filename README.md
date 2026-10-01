@@ -4,6 +4,10 @@
 
 Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzamel ze allemaal en klik ze in elkaar tot een bouwwerk.
 
+[![Bekijk de reclame van 80 seconden](docs/reclame.jpg)](commercial/flippos-reclame.mp4)
+
+*Klik op het beeld voor de reclame (80 seconden, met geluid).*
+
 **Spelen: [flippos.bramdehart.nl](https://flippos.bramdehart.nl)** · Broncode: [github.com/bramdehart/flippos](https://github.com/bramdehart/flippos)
 
 ![De mappen liggen over elkaar op tafel; de gekozen map ligt bovenop](docs/keuze.jpg)
