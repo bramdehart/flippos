@@ -55,7 +55,7 @@ body {
 }
 #bar button:active { transform: translateY(2px); box-shadow: none; }
 #btn-sound { background: #fff; box-shadow: 0 2px 0 #9db4d6; }
-@media (max-width: 1250px) {
+@media (max-width: 1560px) {
   /* te smal voor volledige tekst: pictogram met een kort woord eronder */
   #bar button span { display: none; }
   #bar button {
@@ -155,7 +155,7 @@ body {
   transform: rotateY(180deg);
   border-radius: calc(var(--u) * 14);
 }
-.frontcover { background: #6ec3ee url(img/cover.jpg) center / 100% 100% no-repeat; }
+.frontcover { background: #6ec3ee center / 100% 100% no-repeat; }
 .backcover {
   display: grid;
   place-content: center;
@@ -293,7 +293,7 @@ body {
   will-change: transform;
   transition: opacity .2s;
 }
-.disc.stowed { opacity: 0; pointer-events: none; }
+.disc.stowed { display: none; }
 .disc.fall { transition: transform .6s cubic-bezier(.3, 1.25, .5, 1); }
 .disc.anim { transition: transform .28s cubic-bezier(.3, 1.4, .5, 1), opacity .2s; }
 .disc.drag {
@@ -477,7 +477,7 @@ body {
 .pk {
   position: absolute;
   inset: 0;
-  background: url(img/pack.jpg) center / 100% 100% no-repeat;
+  background: var(--pk) center / 100% 100% no-repeat;
   border-radius: 6px;
 }
 .pk-hint {
@@ -502,7 +502,7 @@ body {
 #btn-3d.ready { animation: ready 1s ease-in-out 3; }
 @keyframes ready { 50% { background: #fff; transform: scale(1.12); } }
 @media (max-width: 640px) {
-  #bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px 6px 7px; overflow: visible; }
+  #bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 5px 6px 7px; overflow: visible; }
   .logo, .spacer { display: none; }
   .count { grid-column: 1 / -1; justify-self: center; font-size: 12px; padding: 2px 10px; }
   #bar button { padding: 3px 2px 4px; }
@@ -604,3 +604,265 @@ body {
 .album.closed .leaf.left .page > * { transition-delay: .35s; }
 .album.closed .leaf.right .page > * { transition-delay: .65s; }
 .album.single .page > * { transition-delay: 0s !important; }
+
+#bar button[hidden] { display: none; }
+
+/* ---------- overzicht: kies een map ---------- */
+#chooser {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 20px 14px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .22) 0 1px, transparent 2px) 0 0 / 37px 41px,
+    radial-gradient(circle at 70% 60%, rgba(60, 50, 40, .18) 0 1px, transparent 2px) 0 0 / 53px 47px,
+    radial-gradient(ellipse at 50% 40%, #c9c2b3, #a59d8d);
+}
+#chooser[hidden] { display: none; }
+#chooser h1 { margin: 0; font-size: clamp(22px, 4vw, 36px); color: #2f2a20; text-align: center; }
+.ch-list { display: flex; gap: clamp(10px, 3vw, 36px); justify-content: center; align-items: flex-start; width: 100%; max-width: 860px; }
+.ch-card {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  font: inherit;
+  color: #2f2a20;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 250px;
+  transition: transform .18s;
+}
+.ch-card:hover { transform: translateY(-6px) rotate(-1.5deg); }
+.ch-card img {
+  width: 100%;
+  aspect-ratio: 880 / 1300;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .4), -5px 0 0 rgba(0, 0, 0, .18);
+}
+.ch-card b { font-size: clamp(13px, 2vw, 20px); }
+.ch-card span { font-size: clamp(11px, 1.5vw, 14px); opacity: .75; }
+.ch-card em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: clamp(11px, 1.5vw, 14px);
+  background: #ffd23f;
+  color: #143a75;
+  border-radius: 99px;
+  padding: 2px 10px;
+}
+
+/* ---------- flippo-map: ringband met insteekbladen ---------- */
+.binder .leaf > * { box-shadow: 0 calc(var(--u) * 10) calc(var(--u) * 36) rgba(0, 0, 0, .4), 0 0 0 calc(var(--u) * 6) #c9b76a; }
+.binder .spine { background: linear-gradient(90deg, #a89650, #e6d68c 30%, #f4e9ae 50%, #e6d68c 70%, #a89650); }
+.binder .backcover {
+  color: #3a3216;
+  background:
+    radial-gradient(circle, rgba(60, 50, 20, .12) 0 calc(var(--u) * 2), transparent calc(var(--u) * 3)) 0 0 / calc(var(--u) * 23) calc(var(--u) * 19),
+    #ead98b;
+}
+.binder .bc-logo { color: #ffe100; -webkit-text-stroke: calc(var(--u) * 10) #111; }
+.page.inside { background: #f3e36a var(--inside) center / 100% 100% no-repeat; }
+.page.blank { background: #ead98b; }
+.page.sheet {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, .5), transparent 30%, transparent 70%, rgba(255, 255, 255, .35)),
+    #fbfaf4;
+}
+.page.sheet .pagenum { top: calc(var(--u) * 26); bottom: auto; font-size: calc(var(--u) * 21); color: #8a8470; font-weight: 700; }
+.rings {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: calc(var(--u) * 62);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: calc(var(--u) * 90) 0;
+}
+.page.rightside .rings { right: auto; left: 0; }
+.rings i {
+  width: calc(var(--u) * 26);
+  height: calc(var(--u) * 26);
+  border-radius: 50%;
+  background: #6d6a60;
+  box-shadow: inset 0 calc(var(--u) * 3) calc(var(--u) * 5) rgba(0, 0, 0, .6), 0 0 0 calc(var(--u) * 4) #e9e6da;
+}
+.pocket .plabel {
+  left: calc(var(--u) * -95);
+  top: calc(var(--u) * -124);
+  width: calc(var(--u) * 190);
+  height: calc(var(--u) * 28);
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 7);
+  font-size: calc(var(--u) * 15);
+  color: #55503f;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.pocket .plabel b {
+  flex: none;
+  min-width: calc(var(--u) * 34);
+  height: calc(var(--u) * 26);
+  padding: 0 calc(var(--u) * 5);
+  border-radius: 99px;
+  background: var(--c);
+  color: #fff;
+  font-size: calc(var(--u) * 14);
+  display: grid;
+  place-items: center;
+}
+.pocket .plabel span { overflow: hidden; text-overflow: ellipsis; }
+.pocket .hole {
+  width: calc(var(--u) * 186);
+  height: calc(var(--u) * 186);
+  left: calc(var(--u) * -93);
+  top: calc(var(--u) * -93);
+  background: #efece1;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+.pocket .hole img { opacity: .3; filter: saturate(.6); }
+.pocket .hole.none { display: grid; place-items: center; font-size: calc(var(--u) * 70); font-weight: 800; color: #c9c4b3; }
+.pocket .plastic {
+  left: calc(var(--u) * -96);
+  top: calc(var(--u) * -96);
+  width: calc(var(--u) * 192);
+  height: calc(var(--u) * 192);
+  border-radius: calc(var(--u) * 6);
+  border: 1px solid rgba(0, 0, 0, .09);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .55), transparent 35%, transparent 75%, rgba(255, 255, 255, .3));
+  pointer-events: none;
+}
+.slot.pocket.target .hole { animation: pulse2 .7s ease-in-out infinite; }
+@keyframes pulse2 {
+  0%, 100% { box-shadow: 0 0 0 calc(var(--u) * 3) var(--c); }
+  50% { box-shadow: 0 0 0 calc(var(--u) * 12) var(--c), 0 0 calc(var(--u) * 30) calc(var(--u) * 10) var(--c); }
+}
+.album.turnpage .page { animation: pagein .3s ease-out; }
+@keyframes pagein { from { opacity: .25; } }
+
+/* ronde flippo's: het plaatje heeft zelf al de juiste vorm, dus geen masker met gleufjes */
+.disc.flat .face { -webkit-mask: none; mask: none; overflow: visible; border-radius: 0; }
+.disc.flat .front img { transform: none; }
+.disc.flat .shine { border-radius: 50%; overflow: hidden; }
+.imgback img { width: 100%; height: 100%; display: block; pointer-events: none; -webkit-user-drag: none; }
+.disc.flat .back:not(.imgback) { border-radius: 50%; overflow: hidden; }
+
+.disc.flat .imgback { border-radius: 50%; overflow: hidden; }
+
+/* flippo schuift van boven in het hoesje; eenmaal erin ligt hij achter het plastic */
+.disc.slidein { transition: transform .38s cubic-bezier(.45, 0, .55, 1); }
+.disc.flat.inslot:not(.drag)::after {
+  content: "";
+  position: absolute;
+  inset: -3%;
+  border-radius: 4%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .38), transparent 34%, transparent 72%, rgba(255, 255, 255, .22));
+  pointer-events: none;
+}
+
+/* ---------- bolle zak chips ---------- */
+.pack.puffy { filter: drop-shadow(0 24px 22px rgba(0, 0, 0, .55)); }
+.pack.puffy .pk {
+  border-radius: 0;
+  /* kussenvorm: bij de naden iets ingesnoerd, in het midden bol */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M3%2C0%20H97%20C97%2C4%20100%2C8%20100%2C14%20V86%20C100%2C92%2097%2C96%2097%2C100%20H3%20C3%2C96%200%2C92%200%2C86%20V14%20C0%2C8%203%2C4%203%2C0%20Z%27/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M3%2C0%20H97%20C97%2C4%20100%2C8%20100%2C14%20V86%20C100%2C92%2097%2C96%2097%2C100%20H3%20C3%2C96%200%2C92%200%2C86%20V14%20C0%2C8%203%2C4%203%2C0%20Z%27/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+.pack.puffy .pk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 34% 26% at 30% 27%, rgba(255, 255, 255, .6), transparent 70%),
+    radial-gradient(ellipse 16% 30% at 78% 62%, rgba(255, 255, 255, .22), transparent 70%),
+    linear-gradient(90deg, rgba(0, 0, 0, .55), transparent 20%, rgba(255, 255, 255, .1) 45%, transparent 76%, rgba(0, 0, 0, .6)),
+    linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 13%, transparent 85%, rgba(0, 0, 0, .55)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 7px) top / 100% 5% no-repeat,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 7px) bottom / 100% 5% no-repeat;
+}
+.pk-flap { transition: transform .08s linear; }
+.pk-flap.l { transform-origin: 0% 13%; }
+.pk-flap.r { transform-origin: 100% 13%; }
+/* --sq = hoe hard er tegen de onderkant geduwd wordt: de zak wordt korter en boller */
+.pk-wrap {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 0;
+  transform: scale(calc(1 + var(--sq, 0) * .1), calc(1 - var(--sq, 0) * .1));
+  transition: transform .12s ease-out;
+}
+.pack.popped { animation: bagpop .4s cubic-bezier(.3, 1.6, .5, 1); }
+.pack.popped .pk-flap { transition: transform .22s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes bagpop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.14, .92); }
+  100% { transform: scale(1); }
+}
+.pk-pop {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  transform: translate(-50%, -50%);
+  font-size: calc(54px * var(--hs, 1));
+  font-weight: 900;
+  font-style: italic;
+  color: #ffe100;
+  -webkit-text-stroke: 3px #111;
+  paint-order: stroke fill;
+  pointer-events: none;
+  animation: poptext .7s ease-out forwards;
+}
+@keyframes poptext {
+  0% { transform: translate(-50%, -50%) scale(.2) rotate(-12deg); opacity: 1; }
+  40% { transform: translate(-50%, -50%) scale(1.3) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(-50%, -30%) scale(1.5) rotate(-8deg); opacity: 0; }
+}
+
+/* flippo's in de 3D-weergave: zelfde vorm als op tafel */
+.d3.flat .face { -webkit-mask: none; mask: none; overflow: visible; border-radius: 0; }
+.d3.flat .front img { transform: none; }
+.d3.flat .imgback, .d3.flat .back:not(.imgback) { border-radius: 50%; overflow: hidden; }
+
+/* kaften in het overzicht: als een dichte map, met de rug links */
+.ch-book {
+  --ring: #2f79c9;
+  width: 100%;
+  padding-left: 5%;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #1f5ea8, #5aa3e6 30%, #7fc0f5 50%, #5aa3e6 70%, #1f5ea8) 0 0 / 5.5% 100% no-repeat, var(--ring);
+  box-shadow: 0 0 0 3px var(--ring), 0 10px 22px rgba(0, 0, 0, .4);
+}
+.ch-book.flippo {
+  --ring: #c9b76a;
+  background: linear-gradient(90deg, #a89650, #e6d68c 30%, #f4e9ae 50%, #e6d68c 70%, #a89650) 0 0 / 5.5% 100% no-repeat, var(--ring);
+}
+.ch-card .ch-book img { display: block; margin: 0; box-shadow: none; border-radius: 0 6px 6px 0; }
+
+/* glans op de Techno-flippo's subtiel houden, anders verbleekt het plaatje */
+.disc.flat.holo .shine, .d3.flat.holo .shine { opacity: .22; }
+
+/* overzicht op telefoon: mappen twee aan twee */
+@media (max-width: 640px) {
+  #chooser { justify-content: flex-start; gap: 18px; }
+  .ch-list { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 18px; max-width: 420px; padding: 0 6px; }
+  .ch-card { max-width: none; }
+  .ch-card b { font-size: 15px; }
+  .ch-card span, .ch-card em { font-size: 12px; }
+}

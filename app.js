@@ -17,7 +17,21 @@ const DATA = [
   ['Anna', 'Bramen', '🫐'], ['Katrien', 'Radijs', '🌱'],
 ];
 const COLORS = ['#c4215d', '#e8702a', '#eeb02c', '#1f7a4d', '#1e5fc4', '#4b2a9b'];
-const SHINY = { 2: 'foil', 17: 'laser', 21: 'glitter', 25: 'holo' };
+
+// ---------- de drie mappen ----------
+const SETS = {
+  flippo1: { title: "Flippo's map 1", kind: 'flippo', from: 1, to: 250, store: 'flippo-state-f1', dir: 'img/flippo-1', cover: 'img/flippo-1/cover.jpg', pack: 'img/flippo-1/chips.jpg', packRatio: 0.6 },
+  flippo2: { title: "Flippo's map 2", kind: 'flippo', from: 251, to: 545, store: 'flippo-state-f2', dir: 'img/flippo-2', cover: 'img/flippo-2/cover.jpg', pack: 'img/flippo-2/chips.jpg', packRatio: 0.6 },
+  diskeyz: { title: 'AH Diskeyz', kind: 'diskeyz', from: 1, to: 30, store: 'flippo-state-v1', dir: 'img/diskeyz', cover: 'img/diskeyz/cover.jpg', pack: 'img/diskeyz/pack.jpg', packRatio: 420 / 638 },
+};
+const SET = SETS[location.hash.slice(1)] || null;   // geen keuze = eerst het overzicht
+const FLIPPO = !!SET && SET.kind === 'flippo';       // ronde flippo's zonder gleufjes
+// per serie een eigen kleur (achterkant en rand van het vakje)
+const FCOLORS = ['#d7263d', '#f08a24', '#7b2cbf', '#1b9aaa', '#2a9d4b', '#e63987', '#1f6fd0', '#f0a202',
+  '#8f2d56', '#3a7d44', '#8f2d56', '#c1121f', '#5a5a9c', '#0b7a75', '#4a2c6f'];
+const SHINY = FLIPPO
+  ? Object.fromEntries(Array.from({ length: 20 }, (_, i) => [121 + i, 'holo']))   // Techno-flippo's glimmen
+  : { 2: 'foil', 17: 'laser', 21: 'glitter', 25: 'holo' };
 
 // vakjes op een pagina, in map-eenheden (pagina = 880 x 1300)
 const ROWS = [
@@ -36,12 +50,62 @@ const PAGE_W = 880, SPINE = 40, DISC_R = 93;
 const SLIT_DEPTH = 0.2;                  // deel van de straal
 const LINK = 2 - 2 * SLIT_DEPTH + 0.04;  // afstand tussen twee vastgeklikte flippo's (in stralen)
 const MAX_DISCS = 60;
-const STORE = 'flippo-state-v1';
+const STORE = SET ? SET.store : '';
 
 const $ = (s) => document.querySelector(s);
 const stage = $('#stage'), table = $('#table');
 const pad2 = (n) => String(n).padStart(2, '0');
-const colorOf = (id) => COLORS[Math.floor((id - 1) / 5)];
+const pad3 = (n) => String(n).padStart(3, '0');
+const MISSING = new Set(FLIPPO ? FLIPPOS.missing : []);          // nummers waar geen plaatje van is
+const IDS = SET ? Array.from({ length: SET.to - SET.from + 1 }, (_, i) => SET.from + i).filter((id) => !MISSING.has(id)) : [];
+const IDSET = new Set(IDS);
+const seriesOf = (id) => FLIPPOS.series.findIndex((x) => id >= x.from && id <= x.to);
+const label = (id) => (FLIPPO ? String(id) : pad2(id));
+const nameOf = (id) => (FLIPPO ? FLIPPOS.names[id] || `Flippo ${id}` : DATA[id - 1][0]);
+const imgOf = (id) => (FLIPPO ? `${SET.dir}/${pad3(id)}.webp` : `${SET.dir}/${pad2(id)}.jpg`);
+// inkepingen: Diskeyz hebben er altijd acht; bij de flippo's alleen sommige series (Techno, Strip, Flying).
+// slitBase = hoeveel graden de acht inkepingen verdraaid staan op het plaatje (undefined = geen inkepingen)
+const slitBase = (id) => (FLIPPO ? FLIPPOS.slits[id] : 0);
+const hasSlits = (id) => slitBase(id) != null;
+// afstand tussen twee vastgeklikte flippo's, in stralen (flippo's hebben ondiepere inkepingen)
+const LINKD = FLIPPO ? 1.7 : LINK;
+const colorOf = (id) => (FLIPPO ? FCOLORS[seriesOf(id)] : COLORS[Math.floor((id - 1) / 5)]);
+
+function backHtml(id) {
+  if (!FLIPPO) {
+    const [, food, emo] = DATA[id - 1];
+    return `<div class="face back"><div class="emo">${emo}</div><div class="food">${food}</div><div class="no">${pad2(id)}</div></div>`;
+  }
+  const si = seriesOf(id), ser = FLIPPOS.series[si];
+  const src = FLIPPOS.ownBack.includes(id) ? `${SET.dir}/b${pad3(id)}.webp` : ser.back ? `${SET.dir}/back-${pad2(si + 1)}.webp` : '';
+  return src
+    ? `<div class="face back imgback"><img src="${src}" alt="" draggable="false"></div>`
+    : `<div class="face back"><div class="emo">🌀</div><div class="food">${ser.name}</div><div class="no">${id}</div></div>`;
+}
+
+// bladzijden van de map. Diskeyz: twee vaste pagina's. Flippo's: binnenkant van de kaft,
+// daarna insteekbladen met 4 x 5 vakjes.
+function buildPages() {
+  if (!SET) return [];
+  if (!FLIPPO) {
+    let id = 1;
+    return [0, 1].map((p) => ({ kind: 'diskeyz', p, slots: ROWS.flatMap(([y, xs]) => xs.map((x) => ({ id: id++, x, y }))) }));
+  }
+  const pages = [{ kind: 'inside' }];
+  for (let a = SET.from; a <= SET.to; a += 20) {
+    const side = pages.length % 2, b = Math.min(a + 19, SET.to), list = [];
+    for (let id = a; id <= b; id++) {
+      const i = id - a;
+      list.push({ id, x: (side ? 175 : 135) + (i % 4) * 190, y: 205 + Math.floor(i / 4) * 247 });
+    }
+    pages.push({ kind: 'sheet', side, from: a, to: b, slots: list });
+  }
+  if (pages.length % 2) pages.push({ kind: 'blank' });
+  return pages;
+}
+const PAGES = buildPages();
+// staat deze bladzijde nu open? (liggend: twee tegelijk, staand: één)
+const pageVisible = (p) => (L.single ? p === curPage : p - (p % 2) === curPage - (curPage % 2));
 const mod = (a, n) => ((a % n) + n) % n;
 const rad = (d) => d * Math.PI / 180;
 
@@ -156,8 +220,8 @@ const bgUp = (e) => {
   bgPointers.delete(e.pointerId);
   // vegen over de map = bladeren
   const sdx = e.clientX - p.sx, sdy = e.clientY - p.sy;
-  if (L.single && view.z === 1 && !bgPointers.size && e.target.closest?.('.album') &&
-      Math.abs(sdx) > 45 && Math.abs(sdx) > Math.abs(sdy) * 1.5) setPage(sdx < 0 ? 1 : 0);
+  if (view.z === 1 && !bgPointers.size && e.target.closest?.('.album') &&
+      Math.abs(sdx) > 45 && Math.abs(sdx) > Math.abs(sdy) * 1.5) turnPage(sdx < 0 ? 1 : -1);
   // dubbeltik op de tafel = zoom terugzetten
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 8 && !e.target.closest('.album')) {
     const now = performance.now();
@@ -175,63 +239,89 @@ table.addEventListener('wheel', (e) => {
 
 function buildAlbum() {
   stage.querySelector('.albumwrap')?.remove();
+  if (!L.single) curPage -= curPage % 2;
   const wrap = document.createElement('div');
   wrap.className = 'albumwrap';
   wrap.style.left = L.ax + 'px';
   wrap.style.top = L.ay + 'px';
   const album = document.createElement('div');
-  album.className = 'album';
+  album.className = 'album' + (FLIPPO ? ' binder' : '');
+  album.style.setProperty('--inside', `url(${SET.dir}/inside.jpg)`);
   album.addEventListener('click', () => { if (albumState !== 'open') setAlbum(albumState === 'back' ? 'front' : 'open'); });
   wrap.appendChild(album);
   albumEl = album;
+  // plek van álle vakjes, ook op bladzijden die nu niet open liggen
   const occupied = Object.fromEntries(Object.entries(slots).map(([id, s]) => [id, s.uid]));
   slots = {};
-  let id = 1;
+  PAGES.forEach((pg, pi) => (pg.slots || []).forEach((sl) => {
+    slots[sl.id] = {
+      x: L.ax + ((L.single ? 0 : (pi % 2) * (PAGE_W + SPINE)) + sl.x) * L.u,
+      y: L.ay + sl.y * L.u,
+      page: pi, el: null, uid: occupied[sl.id] ?? null,
+    };
+  }));
+  const base = curPage - (curPage % 2);
   for (let p = 0; p < 2; p++) {
     if (p === 1) album.insertAdjacentHTML('beforeend', '<div class="spine"></div>');
+    const pg = PAGES[base + p];
     const page = document.createElement('div');
-    page.className = 'page';
-    for (const [e, x, y, size, r] of DECOR[p]) {
-      page.insertAdjacentHTML('beforeend',
-        `<div class="decor" style="left:calc(var(--u)*${x});top:calc(var(--u)*${y});font-size:calc(var(--u)*${size});--r:${r}deg">${e}</div>`);
-    }
-    for (const [y, xs] of ROWS) {
-      for (const x of xs) {
+    page.className = 'page ' + pg.kind + (pg.side ? ' rightside' : '');
+    if (pg.kind === 'diskeyz') {
+      for (const [e, x, y, size, r] of DECOR[p]) {
+        page.insertAdjacentHTML('beforeend',
+          `<div class="decor" style="left:calc(var(--u)*${x});top:calc(var(--u)*${y});font-size:calc(var(--u)*${size});--r:${r}deg">${e}</div>`);
+      }
+      for (const { id, x, y } of pg.slots) {
         const el = document.createElement('div');
         el.className = 'slot';
         el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
         el.innerHTML = `<div class="ear"></div><div class="ring"></div>` +
-          `<div class="hole"><img src="img/${pad2(id)}.jpg" alt="" draggable="false"></div>` +
+          `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>` +
           `<div class="num">${pad2(id)}</div>` +
           (SHINY[id] ? `<div class="sticker ${SHINY[id]}"></div>` : '');
         page.appendChild(el);
-        slots[id] = {
-          x: L.ax + ((L.single ? 0 : p * (PAGE_W + SPINE)) + x) * L.u,
-          page: p,
-          y: L.ay + y * L.u,
-          el, uid: occupied[id] ?? null,
-        };
-        id++;
+        slots[id].el = el;
       }
+      page.insertAdjacentHTML('beforeend',
+        `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*18)">${11 + p}</div>`);
+    } else if (pg.kind === 'sheet') {
+      // doorzichtig insteekblad met vakjes; erachter een vel met de plaatjes
+      page.insertAdjacentHTML('beforeend', '<div class="rings"><i></i><i></i><i></i><i></i></div>');
+      for (const { id, x, y } of pg.slots) {
+        const el = document.createElement('div');
+        el.className = 'slot pocket';
+        el.style.cssText = `left:calc(var(--u)*${x});top:calc(var(--u)*${y});--c:${colorOf(id)}`;
+        el.innerHTML = `<div class="plabel"><b>${id}</b><span>${MISSING.has(id) ? '' : nameOf(id)}</span></div>` +
+          (MISSING.has(id)
+            ? `<div class="hole none">?</div>`
+            : `<div class="hole"><img src="${imgOf(id)}" alt="" draggable="false"></div>`) +
+          `<div class="plastic"></div>`;
+        page.appendChild(el);
+        slots[id].el = el;
+      }
+      page.insertAdjacentHTML('beforeend',
+        `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*30)">${FLIPPOS.series[seriesOf(pg.from)].name} · ${pg.from}–${pg.to}</div>`);
     }
-    page.insertAdjacentHTML('beforeend',
-      `<div class="pagenum" style="${p ? 'right' : 'left'}:calc(var(--u)*18)">${11 + p}</div>`);
     // elk blad heeft een binnenkant (de pagina) en een buitenkant (voor- of achterkaft)
     const leaf = document.createElement('div');
     leaf.className = 'leaf ' + (p ? 'right' : 'left');
     leaf.appendChild(page);
     leaf.insertAdjacentHTML('beforeend', p
-      ? `<div class="cover backcover"><div class="bc-logo">Diskeyz</div><div class="bc-text">Spaar ze alle 30!</div><div class="bc-count"></div></div>`
-      : `<div class="cover frontcover"></div>`);
+      ? `<div class="cover backcover"><div class="bc-logo">${FLIPPO ? "Flippo's" : 'Diskeyz'}</div><div class="bc-text">Spaar ze allemaal!</div><div class="bc-count"></div></div>`
+      : `<div class="cover frontcover" style="background-image:url(${SET.cover})"></div>`);
     album.appendChild(leaf);
   }
-  // bladerknop (alleen als er één pagina tegelijk in beeld is)
-  const pg = document.createElement('button');
-  pg.className = 'pgbtn';
-  pg.addEventListener('click', () => setPage(1 - curPage));
-  wrap.appendChild(pg);
+  // bladerknoppen
+  for (const dir of [-1, 1]) {
+    const pg = document.createElement('button');
+    pg.className = 'pgbtn ' + (dir < 0 ? 'prev' : 'next');
+    pg.textContent = dir < 0 ? '‹' : '›';
+    pg.addEventListener('click', () => turnPage(dir));
+    wrap.appendChild(pg);
+  }
   stage.prepend(wrap);
   applyAlbumState(true);
+  updateCount();
 }
 
 // na wisselen tussen liggend/staand: losse flippo's meeschalen
@@ -260,15 +350,15 @@ function remap(old) {
 function makeDisc(id, props = {}) {
   const d = { uid: uidSeq++, id, x: 0, y: 0, rot: 0, flipped: false, slot: null, links: [], z: ++zTop, ...props };
   uidSeq = Math.max(uidSeq, d.uid + 1);
-  const [name, food, emo] = DATA[id - 1];
   const el = document.createElement('div');
-  el.className = 'disc' + (SHINY[id] ? ' shiny ' + SHINY[id] : '');
+  el.className = 'disc' + (FLIPPO ? ' flat' : '') + (SHINY[id] ? ' shiny ' + SHINY[id] : '');
   el.style.setProperty('--c', colorOf(id));
   el.innerHTML =
     `<div class="flip">` +
-    `<div class="face front"><img src="img/${pad2(id)}.jpg" alt="${name}" draggable="false">` +
-    (SHINY[id] ? `<div class="shine"></div>` : '') + `<div class="gloss"></div></div>` +
-    `<div class="face back"><div class="emo">${emo}</div><div class="food">${food}</div><div class="no">${pad2(id)}</div></div>` +
+    `<div class="face front"><img src="${imgOf(id)}" alt="${nameOf(id).replace(/"/g, '')}" draggable="false">` +
+    (SHINY[id] ? `<div class="shine"${FLIPPO ? ` style="-webkit-mask:url(${imgOf(id)}) center/100% 100%;mask:url(${imgOf(id)}) center/100% 100%"` : ''}></div>` : '') +
+    (FLIPPO ? '' : `<div class="gloss"></div>`) + `</div>` +
+    backHtml(id) +
     `</div>` +
     (SHINY[id] ? `<span class="spark s1">✦</span><span class="spark s2">✦</span><span class="spark s3">✦</span>` : '');
   d.el = el;
@@ -285,7 +375,7 @@ function render(d) {
   s.setProperty('--x', d.x + 'px');
   s.setProperty('--y', d.y + 'px');
   s.setProperty('--rot', d.rot + 'deg');
-  s.zIndex = d.slot != null ? 2 : d.z;
+  s.zIndex = d.slot != null && !d.sliding ? 2 : d.z;
   if (SHINY[d.id]) s.setProperty('--sh', mod(d.x * 0.28 + d.y * 0.17 + d.rot * 0.6 + pointerShift, 100).toFixed(1));
   d.el.classList.toggle('inslot', d.slot != null);
   d.el.classList.toggle('flipped', d.flipped);
@@ -371,19 +461,18 @@ function tableSpot() {
 // ---------- map open, dicht en omdraaien ----------
 // 'open' | 'front' (dicht, voorkant boven) | 'back' (dicht, achterkant boven)
 // kun je nu bij dit vakje? (map open, en op mobiel: de juiste pagina voor)
-const slotOpen = (id) => albumState === 'open' && (!L.single || slots[id].page === curPage);
+const slotOpen = (id) => albumState === 'open' && pageVisible(slots[id].page);
 
 function applyAlbumState(instant) {
   const open = albumState === 'open';
   albumEl.classList.toggle('closed', !open);
   albumEl.classList.toggle('turned', albumState === 'back');
   albumEl.classList.toggle('single', !!L.single);
-  albumEl.classList.toggle('p0', curPage === 0);
-  albumEl.classList.toggle('p1', curPage === 1);
-  const pg = albumEl.parentNode.querySelector('.pgbtn');
-  pg.hidden = !(L.single && open);
-  pg.textContent = curPage ? '‹' : '›';
-  pg.classList.toggle('prev', curPage === 1);
+  albumEl.classList.toggle('p0', curPage % 2 === 0);
+  albumEl.classList.toggle('p1', curPage % 2 === 1);
+  const step = L.single ? 1 : 2;
+  albumEl.parentNode.querySelector('.pgbtn.prev').hidden = !open || curPage - step < 0;
+  albumEl.parentNode.querySelector('.pgbtn.next').hidden = !open || curPage + step >= PAGES.length;
   // flippo's in vakjes die je niet ziet zijn verstopt; ze komen pas terug als het blad ligt
   clearTimeout(applyAlbumState.t);
   const set = () => discs.forEach((d) => d.el.classList.toggle('stowed', d.slot != null && !slotOpen(d.slot)));
@@ -399,12 +488,18 @@ function applyAlbumState(instant) {
 }
 
 function setPage(p) {
-  if (!L.single || p === curPage || albumState !== 'open') return;
+  if (albumState !== 'open') return;
+  p = Math.max(0, Math.min(PAGES.length - 1, p));
+  if (!L.single) p -= p % 2;
+  if (p === curPage) return;
+  const sameSpread = p - (p % 2) === curPage - (curPage % 2);
   curPage = p;
-  applyAlbumState(false);
+  if (sameSpread) applyAlbumState(false);
+  else { buildAlbum(); albumEl.classList.add('turnpage'); }   // andere bladen: opnieuw opbouwen
   snd('flip');
   save();
 }
+const turnPage = (dir) => setPage(curPage + dir * (L.single ? 1 : 2));
 
 function setAlbum(state) {
   if (state === albumState) return;
@@ -419,10 +514,26 @@ function putInSlot(d, quiet) {
   const s = slots[d.id];
   d.slot = d.id; s.uid = d.uid;
   d.x = s.x; d.y = s.y; d.rot = 0;
-  animate([d]);
-  render(d);
-  if (!quiet) { snd('slot'); pop(d); }
-  if (!slotOpen(d.id)) setTimeout(() => d.slot != null && !slotOpen(d.slot) && d.el.classList.add('stowed'), 320);
+  if (FLIPPO) {
+    // eerst boven het hoesje hangen, dan van boven naar beneden erin schuiven
+    d.y = s.y - L.R * 2.05;
+    d.sliding = true;
+    animate([d], 170);
+    render(d);
+    setTimeout(() => {
+      if (d.slot !== d.id) { d.sliding = false; return; }   // intussen weer opgepakt
+      d.el.classList.add('slidein');
+      d.y = slots[d.id].y;
+      render(d);
+      if (!quiet) snd('slot');
+      setTimeout(() => { d.el.classList.remove('slidein'); d.sliding = false; render(d); }, 400);
+    }, 180);
+  } else {
+    animate([d]);
+    render(d);
+    if (!quiet) { snd('slot'); pop(d); }
+  }
+  if (!slotOpen(d.id)) setTimeout(() => d.slot != null && !slotOpen(d.slot) && d.el.classList.add('stowed'), FLIPPO ? 640 : 320);
   updateCount();
 }
 
@@ -430,17 +541,19 @@ function leaveSlot(d) {
   if (d.slot == null) return;
   slots[d.slot].uid = null;
   d.slot = null;
+  d.sliding = false;
+  d.el.classList.remove('slidein');
   d.el.classList.remove('stowed');
   d.z = ++zTop;
   updateCount();
 }
 
 function updateCount() {
-  const n = discs.filter((d) => d.slot != null).length;
-  $('#count').textContent = `${n} / 30 in de map`;
+  const n = discs.filter((d) => d.slot != null).length, total = IDS.length;
+  $('#count').textContent = `${n} / ${total} in de map`;
   const bc = document.querySelector('.bc-count');
-  if (bc) bc.textContent = `${n} / 30`;
-  if (n === 30 && updateCount.last !== 30) toast('🎉 De map is compleet!');
+  if (bc) bc.textContent = `${n} / ${total}`;
+  if (n === total && updateCount.last != null && updateCount.last !== total) toast('🎉 De map is compleet!');
   updateCount.last = n;
 }
 
@@ -454,11 +567,11 @@ function pop(d) {
 const slitUsed = (d, k) => d.links.some((l) => l.slit === k);
 
 function tryConnect(group) {
-  const R = L.R, target = LINK * R, inGroup = new Set(group);
+  const R = L.R, target = LINKD * R, inGroup = new Set(group);
   const cands = [];
   for (const a of group) {
     for (const o of discs) {
-      if (inGroup.has(o) || o.slot != null) continue;
+      if (inGroup.has(o) || o.slot != null || !hasSlits(a.id) || !hasSlits(o.id)) continue;
       const dist = Math.hypot(a.x - o.x, a.y - o.y);
       if (dist < R * 0.9 || dist > R * 2.2) continue;
       cands.push({ a, o, score: Math.abs(dist - target) });
@@ -468,11 +581,12 @@ function tryConnect(group) {
 
   for (const { a, o } of cands) {
     const ang = Math.atan2(a.y - o.y, a.x - o.x) * 180 / Math.PI;
-    // gleuf k van o wijst naar o.rot + k*45 - 90
-    const k = mod(Math.round((ang - o.rot + 90) / 45), 8);
+    // gleuf k van o wijst naar o.rot + basis + k*45 - 90
+    const bo = slitBase(o.id), ba = slitBase(a.id);
+    const k = mod(Math.round((ang - o.rot - bo + 90) / 45), 8);
     if (slitUsed(o, k)) continue;
-    const slitAng = o.rot + k * 45 - 90;
-    const want = slitAng + 270 - a.rot;            // a moet een gleuf terug laten wijzen
+    const slitAng = o.rot + bo + k * 45 - 90;
+    const want = slitAng + 270 - a.rot - ba;       // a moet een gleuf terug laten wijzen
     const j = Math.round(want / 45), delta = want - j * 45, jm = mod(j, 8);
     if (slitUsed(a, jm)) continue;
 
@@ -538,7 +652,7 @@ function onMove(e) {
     group.forEach((g) => { g.el.classList.remove('anim'); g.el.classList.add('drag'); });
     if (albumState === 'open' && group.length === 1 && slots[d.id].uid == null) {
       setPage(slots[d.id].page);   // blader vanzelf naar de pagina waar hij hoort
-      slots[d.id].el.classList.add('target');
+      slots[d.id].el?.classList.add('target');
     }
   }
   const p = stagePoint(e);
@@ -568,7 +682,7 @@ function onUp(e) {
   }
 
   group.forEach((g) => g.el.classList.remove('drag'));
-  slots[d.id].el.classList.remove('target');
+  slots[d.id].el?.classList.remove('target');
 
   let done = false;
   if (group.length === 1 && albumState === 'open') {
@@ -578,18 +692,19 @@ function onUp(e) {
       done = true;
     } else {
       // op een ander vakje gelegd? laat even zien waar hij wel hoort
-      const wrong = Object.values(slots).some((o) => o !== s && (!L.single || o.page === curPage) && Math.hypot(d.x - o.x, d.y - o.y) < L.R * 0.6);
+      const wrong = Object.values(slots).some((o) => o !== s && pageVisible(o.page) && Math.hypot(d.x - o.x, d.y - o.y) < L.R * 0.6);
       if (wrong) {
-        toast(s.uid == null ? `${DATA[d.id - 1][0]} hoort in vakje ${pad2(d.id)}` : `Vakje ${pad2(d.id)} is al vol`);
+        toast(s.uid == null ? `${nameOf(d.id)} hoort in vakje ${label(d.id)}` : `Vakje ${label(d.id)} is al vol`);
         if (s.uid == null) {
-          s.el.classList.add('target');
-          setTimeout(() => s.el.classList.remove('target'), 1500);
+          const el = s.el;
+          el?.classList.add('target');
+          setTimeout(() => el?.classList.remove('target'), 1500);
         }
       }
     }
   }
   if (!done) {
-    const ok = tryConnect(group);
+    const ok = tryConnect(group);   // lukt alleen bij flippo's met inkepingen
     const all = groupOf(d);
     clamp(...all);
     animate(all, 200);
@@ -626,7 +741,7 @@ $('#btn-album').onclick = () => {
   if (albumState !== 'open') setAlbum('open');
   let i = albumState === 'open' ? 0 : 0;
   const wait = discs.some((d) => d.el.classList.contains('stowed')) ? 700 : 0;
-  for (let id = 1; id <= 30; id++) {
+  for (const id of IDS) {
     if (slots[id].uid != null) continue;
     const d = discs.find((x) => x.id === id && x.slot == null);
     if (!d) continue;
@@ -648,8 +763,9 @@ $('#btn-turn').onclick = () => {
 };
 
 $('#btn-table').onclick = () => {
-  const list = discs.filter((d) => d.slot != null);
-  if (!list.length) return toast('De map is al leeg');
+  if (albumState !== 'open') setAlbum('open');
+  const list = discs.filter((d) => d.slot != null && pageVisible(slots[d.slot].page));
+  if (!list.length) return toast(PAGES.length > 2 ? 'Deze bladzijden zijn al leeg' : 'De map is al leeg');
   list.forEach((d) => d.el.classList.remove('stowed'));
   for (const d of list) {
     leaveSlot(d);
@@ -683,37 +799,52 @@ $('#btn-loose').onclick = () => {
 
 // ---------- zakje openscheuren ----------
 let pack = null;
+const PACK_N = FLIPPO ? 5 : 3;   // zoveel flippo's per zak
 
 $('#btn-pack').onclick = () => {
   if (pack) return;
-  makeRoom(3);
+  makeRoom(PACK_N);
   const big = L.mode === 'p';
-  const h = big ? 760 : 500, w = h * 420 / 638;
-  // rafelige scheurrand, op 13% van boven
+  const h = (big ? 760 : 500) * (FLIPPO ? 1.3 : 1), w = h * SET.packRatio;   // de zak chips is groter dan het zakje
+  // rafelige rand bij de bovenste naad
+  const cutY = 13;
   const pts = [];
-  for (let i = 0; i <= 14; i++) pts.push(`${(i / 14 * 100).toFixed(1)}% ${(13 + (i % 2 ? 1.6 : -1.2) + Math.random() * 0.8).toFixed(1)}%`);
+  for (let i = 0; i <= 14; i++) pts.push(`${(i / 14 * 100).toFixed(1)}% ${(cutY + (i % 2 ? 1.6 : -1.2) + Math.random() * 0.8).toFixed(1)}%`);
   const edge = pts.join(','), edgeRev = [...pts].reverse().join(',');
   const dim = document.createElement('div');
   dim.className = 'packdim';
   const el = document.createElement('div');
   el.className = 'pack';
-  el.style.cssText = `width:${w}px;height:${h}px;left:${L.W / 2 - w / 2}px;top:${L.H / 2 - h / 2}px`;
-  el.innerHTML =
-    `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
-    `<div class="pk pk-top" style="clip-path:polygon(0 0,100% 0,${edgeRev})"></div>` +
-    `<div class="pk-hint" style="--hs:${big ? 1.8 : 1}">Scheur het zakje open!<br><small>sleep over de bovenkant ↔</small></div>`;
+  el.style.cssText = `width:${w}px;height:${h}px;left:${L.W / 2 - w / 2}px;top:${L.H / 2 - h / 2}px;--pk:url(${SET.pack})`;
+  const hint = (a, b) => `<div class="pk-hint" style="--hs:${big ? 1.8 : 1}">${a}<br><small>${b}</small></div>`;
+  if (FLIPPO) {
+    // bolle zak chips: je duwt tegen de onderkant, de bovenste naad popt in twee flapjes open
+    el.classList.add('puffy');
+    el.innerHTML =
+      `<div class="pk-wrap">` +
+      `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
+      `<div class="pk pk-flap l" style="clip-path:polygon(0 0,50% 0,${pts.slice(0, 8).reverse().join(',')})"></div>` +
+      `<div class="pk pk-flap r" style="clip-path:polygon(50% 0,100% 0,${pts.slice(7).reverse().join(',')})"></div>` +
+      `</div>` +
+      hint('Pop de zak chips open!', 'duw tegen de onderkant ↑');
+  } else {
+    el.innerHTML =
+      `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
+      `<div class="pk pk-top" style="clip-path:polygon(0 0,100% 0,${edgeRev})"></div>` +
+      hint('Scheur het zakje open!', 'sleep over de bovenkant ↔');
+  }
   stage.append(dim, el);
-  pack = { el, dim, w, h, min: null, max: null, start: null, done: false };
+  pack = { el, dim, w, h, min: null, max: null, start: null, done: false, push: FLIPPO, prog: 0 };
   el.addEventListener('pointerdown', onPackDown);
   snd('put');
 };
 
 // ligt de tafel vol, dan verdwijnen de oudste losse (liefst dubbele) flippo's
 function makeRoom(n) {
-  const over = discs.length + n - MAX_DISCS;
+  const loose = discs.filter((d) => d.slot == null);
+  const over = loose.length + n - MAX_DISCS;
   if (over <= 0) return;
   const count = (id) => discs.filter((d) => d.id === id).length;
-  const loose = discs.filter((d) => d.slot == null);
   const rank = (d) => (d.links.length ? 2 : 0) + (count(d.id) > 1 ? 0 : 1);
   loose.sort((a, b) => rank(a) - rank(b) || a.uid - b.uid);
   for (const d of loose.slice(0, over)) {
@@ -724,10 +855,37 @@ function makeRoom(n) {
   }
 }
 
+// zak chips: duwen tegen de onderkant (tikken of omhoog slepen) tot de bovenkant popt
+function pushSet(prog) {
+  pack.prog = Math.max(0, Math.min(1, prog));
+  pack.el.style.setProperty('--sq', pack.prog.toFixed(3));
+  pack.el.querySelector('.pk-flap.l').style.transform = `rotate(${-pack.prog * 9}deg)`;
+  pack.el.querySelector('.pk-flap.r').style.transform = `rotate(${pack.prog * 9}deg)`;
+  const step = Math.floor(pack.prog * 6);
+  if (step !== pack.step) { pack.step = step; snd('rip'); }
+  if (pack.prog >= 1) packOpen(true);
+}
+
+function onPushDown(e) {
+  const r = pack.el.getBoundingClientRect();
+  if ((e.clientY - r.top) / r.height < 0.45) return;       // alleen de onderste helft telt als duwen
+  const y0 = e.clientY, base = pack.prog + 0.22;            // elke duw geeft al een zetje
+  pushSet(base);
+  const move = (ev) => { if (pack && !pack.done) pushSet(base + Math.max(0, y0 - ev.clientY) / (r.height * 0.22)); };
+  const end = () => {
+    pack?.el.removeEventListener('pointermove', move);
+    if (pack && !pack.done) pushSet(pack.prog * 0.75);      // de zak veert een beetje terug
+  };
+  pack.el.addEventListener('pointermove', move);
+  pack.el.addEventListener('pointerup', end, { once: true });
+  pack.el.addEventListener('pointercancel', end, { once: true });
+}
+
 function onPackDown(e) {
   if (!pack || pack.done) return;
   e.preventDefault();
   pack.el.setPointerCapture(e.pointerId);
+  if (pack.push) return onPushDown(e);
   const x = packX(e);
   if (pack.start == null) { pack.start = pack.min = pack.max = x; }
   pack.el.addEventListener('pointermove', onPackMove);
@@ -750,8 +908,10 @@ function onPackMove(e) {
   const prog = pack.max - pack.min;
   const fromLeft = pack.start < 0.5;
   const top = pack.el.querySelector('.pk-top');
-  top.style.transformOrigin = `${fromLeft ? 100 : 0}% 13%`;
-  top.style.transform = `rotate(${(fromLeft ? 1 : -1) * prog * 24}deg)`;
+  if (top) {
+    top.style.transformOrigin = `${fromLeft ? 100 : 0}% 13%`;
+    top.style.transform = `rotate(${(fromLeft ? 1 : -1) * prog * 24}deg)`;
+  }
   const step = Math.floor(prog * 8);
   if (step !== pack.step) { pack.step = step; snd('rip'); }
   if (prog > 0.8) packOpen(fromLeft);
@@ -762,22 +922,37 @@ function packOpen(fromLeft) {
   const { el, dim, h } = pack;
   el.classList.add('open');
   const top = el.querySelector('.pk-top');
-  top.style.transition = 'transform .5s ease-in, opacity .5s';
-  top.style.transform = `translate(${fromLeft ? 60 : -60}px, -120px) rotate(${fromLeft ? 70 : -70}deg)`;
-  top.style.opacity = 0;
   dim.classList.add('gone');
   snd('snap');
-  // zakje kantelt, de flippo's vallen uit de opening
-  setTimeout(() => el.classList.add('tip'), 250);
+  if (top) {
+    top.style.transition = 'transform .5s ease-in, opacity .5s';
+    top.style.transform = `translate(${fromLeft ? 60 : -60}px, -120px) rotate(${fromLeft ? 70 : -70}deg)`;
+    top.style.opacity = 0;
+    // zakje kantelt, de flippo's vallen uit de opening
+    setTimeout(() => el.classList.add('tip'), 250);
+  } else {
+    // POP: de bovenste naad klapt open, de flippo's springen er aan de bovenkant uit
+    snd('pop');
+    el.classList.add('popped');
+    el.style.setProperty('--sq', 0);
+    el.querySelector('.pk-flap.l').style.transform = 'rotate(-80deg)';
+    el.querySelector('.pk-flap.r').style.transform = 'rotate(80deg)';
+    el.insertAdjacentHTML('beforeend', '<div class="pk-pop">POP!</div>');
+  }
   const got = [];
-  for (let i = 0; i < 3; i++) {
-    const id = 1 + Math.floor(Math.random() * 30);
+  // bij de flippo's zit er meestal een nieuwe in, anders duurt sparen eindeloos
+  const have = new Set(discs.map((d) => d.id));
+  for (let i = 0; i < PACK_N; i++) {
+    const fresh = IDS.filter((x) => !have.has(x));
+    const pool = FLIPPO && fresh.length && Math.random() < 0.8 ? fresh : IDS;
+    const id = pool[Math.floor(Math.random() * pool.length)];
+    have.add(id);
     const d = makeDisc(id, { x: L.W / 2, y: L.H / 2, rot: Math.round(Math.random() * 360) });
     d.el.classList.add('stowed');
-    got.push(DATA[id - 1][0] + (SHINY[id] ? ' ✨' : ''));
+    got.push(nameOf(id) + (SHINY[id] ? ' ✨' : ''));
     setTimeout(() => {
       d.el.classList.remove('stowed');
-      d.y = L.H / 2 + h * 0.3;
+      d.y = L.H / 2 + h * (FLIPPO ? -0.42 : 0.3);
       render(d);
       void d.el.offsetWidth;
       Object.assign(d, tableSpot(), { rot: Math.round(Math.random() * 60 - 30) });
@@ -792,12 +967,12 @@ function packOpen(fromLeft) {
     el.classList.add('gone');
     toast('🎁 ' + got.join(', '));
     setTimeout(() => { el.remove(); dim.remove(); pack = null; }, 500);
-  }, 800 + 3 * 280 + 500);
+  }, 800 + PACK_N * 280 + 500);
 }
 
 $('#btn-sound').onclick = () => {
   soundOn = !soundOn;
-  $('#btn-sound').textContent = soundOn ? '🔊' : '🔇';
+  $('#btn-sound').firstChild.textContent = soundOn ? '🔊' : '🔇';
   snd('flip');
 };
 
@@ -806,7 +981,7 @@ $('#btn-sound').onclick = () => {
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const add = (a, b, f = 1) => [a[0] + b[0] * f, a[1] + b[1] * f, a[2] + b[2] * f];
 const mix = (a, fa, b, fb) => [a[0] * fa + b[0] * fb, a[1] * fa + b[1] * fb, a[2] * fa + b[2] * fb];
-const slitDir = (k) => { const a = rad(k * 45 - 90); return [Math.cos(a), Math.sin(a)]; };
+const slitDir = (d, k) => { const a = rad(slitBase(d.id) + k * 45 - 90); return [Math.cos(a), Math.sin(a)]; };
 
 function layout3d(root) {
   const r0 = rad(root.rot);
@@ -819,14 +994,14 @@ function layout3d(root) {
       seen.add(l.other);
       const child = byUid(l.other);
       const back = child.links.find((x) => x.other === p.d.uid);
-      const [ca, sa] = slitDir(l.slit), [cb, sb] = slitDir(back.slit);
+      const [ca, sa] = slitDir(p.d, l.slit), [cb, sb] = slitDir(child, back.slit);
       const D = mix(p.X, ca, p.Y, sa);              // richting van de gleuf van de ouder
       const Z = cross(D, p.Z);                      // kind staat haaks op de ouder
       const U = [-D[0], -D[1], -D[2]], V = cross(Z, U);
       out.push({
         d: child, Z,
         X: mix(U, cb, V, -sb), Y: mix(U, sb, V, cb),
-        c: add(p.c, D, 2 - 2 * SLIT_DEPTH),
+        c: add(p.c, D, FLIPPO ? LINKD : 2 - 2 * SLIT_DEPTH),
       });
     }
   }
@@ -849,7 +1024,7 @@ function open3d() {
   world.innerHTML = '';
   for (const o of parts) {
     const el = document.createElement('div');
-    el.className = 'd3 ' + (SHINY[o.d.id] ? 'shiny ' + SHINY[o.d.id] : '');
+    el.className = 'd3 ' + (FLIPPO ? 'flat ' : '') + (SHINY[o.d.id] ? 'shiny ' + SHINY[o.d.id] : '');
     el.style.setProperty('--c', colorOf(o.d.id));
     el.innerHTML = o.d.el.querySelector('.flip').innerHTML;
     const t = o.c.map((v) => (v * R).toFixed(2));
@@ -916,6 +1091,7 @@ function snd(type) {
       slot: [420, 140, 0.1, 0.3, 'triangle'],
       flip: [520, 880, 0.06, 0.12, 'sine'],
       put: [220, 110, 0.06, 0.18, 'triangle'],
+      pop: [260, 55, 0.14, 0.55, 'sine'],
       rip: [1800 + Math.random() * 1200, 300, 0.05, 0.12, 'sawtooth'],
     }[type];
     const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
@@ -952,32 +1128,70 @@ function save() {
 function load() {
   let st = null;
   try { st = JSON.parse(localStorage.getItem(STORE)); } catch { /* geen opslag */ }
-  if (!st || !Array.isArray(st.discs) || !st.discs.length) return false;
+  if (!st || !Array.isArray(st.discs)) return false;
+  soundOn = st.sound !== false;
+  $('#btn-sound').firstChild.textContent = soundOn ? '🔊' : '🔇';
+  if (['open', 'front', 'back'].includes(st.album)) albumState = st.album;
+  curPage = Math.max(0, Math.min(PAGES.length - 1, st.page | 0));
+  buildAlbum();
   for (const p of st.discs) {
-    if (!(p.id >= 1 && p.id <= 30)) continue;
+    if (!IDSET.has(p.id)) continue;
     const d = makeDisc(p.id, p);
     zTop = Math.max(zTop, d.z);
     if (d.slot != null) slots[d.slot].uid = d.uid;
   }
   // links naar flippo's die niet meer bestaan weghalen
   for (const d of discs) d.links = d.links.filter((l) => byUid(l.other));
-  soundOn = st.sound !== false;
-  if (['open', 'front', 'back'].includes(st.album)) albumState = st.album;
-  curPage = st.page === 1 ? 1 : 0;
   applyAlbumState(true);
-  $('#btn-sound').textContent = soundOn ? '🔊' : '🔇';
   if (st.mode !== L.mode || st.R !== L.R) remap(st);
   else discs.forEach((d) => { if (d.slot != null) { d.x = slots[d.slot].x; d.y = slots[d.slot].y; render(d); } });
   return true;
 }
 
-// ---------- start ----------
-applyLayout();
-if (!load()) {
-  for (let id = 1; id <= 30; id++) {
-    makeDisc(id, { ...tableSpot(), rot: Math.round(Math.random() * 50 - 25) });
+// ---------- overzicht: kies een map ----------
+function showChooser() {
+  const box = $('#chooser');
+  box.hidden = false;
+  for (const [key, set] of Object.entries(SETS)) {
+    let n = 0;
+    try { n = (JSON.parse(localStorage.getItem(set.store))?.discs || []).filter((d) => d.slot != null).length; } catch { /* leeg */ }
+    const gaps = set.kind === 'flippo' ? FLIPPOS.missing.filter((m) => m >= set.from && m <= set.to).length : 0;
+    const total = set.to - set.from + 1 - gaps;
+    const card = document.createElement('button');
+    card.className = 'ch-card';
+    card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt=""></div><b>${set.title}</b>` +
+      `<span>${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : '30 Diskeyz'}</span>` +
+      `<em>${n} / ${total} in de map</em>`;
+    card.onclick = () => { location.hash = key; };
+    box.querySelector('.ch-list').appendChild(card);
   }
 }
-updateCount.last = discs.filter((d) => d.slot != null).length;
-updateCount();
-window.addEventListener('resize', applyLayout);
+$('#btn-home').onclick = () => { location.hash = ''; };
+window.addEventListener('hashchange', () => location.reload());
+
+// ---------- start ----------
+if (!SET) {
+  showChooser();
+} else {
+  document.title = SET.title;
+  $('.logo').textContent = SET.title;
+  if (FLIPPO) {
+    // alleen de series met inkepingen kun je in elkaar zetten
+    const any = IDS.some(hasSlits);
+    $('#btn-loose').hidden = !any;
+    $('#btn-3d').hidden = !any;
+    const pk = $('#btn-pack');
+    pk.querySelector('span').textContent = 'Zak chips openen';
+    pk.dataset.short = 'Chips';
+    pk.title = `Krijg ${PACK_N} flippo's`;
+    $('#hint').textContent = 'Sleep een flippo naar zijn vakje  ·  Flippo\'s met inkepingen klik je in elkaar  ·  Tik = omdraaien  ·  Dubbeltik = losmaken  ·  Bladeren met de pijltjes of door te vegen';
+  }
+  applyLayout();
+  if (!load()) {
+    if (FLIPPO) toast('Open een zak chips om flippo\'s te krijgen!');
+    else for (const id of IDS) makeDisc(id, { ...tableSpot(), rot: Math.round(Math.random() * 50 - 25) });
+  }
+  updateCount.last = null;
+  updateCount();
+  window.addEventListener('resize', applyLayout);
+}

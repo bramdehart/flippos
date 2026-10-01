@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flippo's</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <header id="bar">
   <strong class="logo">Flippo's</strong>
   <span id="count" class="count">0 / 30 in de map</span>
   <span class="spacer"></span>
+  <button id="btn-home" data-short="Mappen" title="Terug naar het overzicht van de mappen">🏠 <span>Mappen</span></button>
   <button id="btn-album" data-short="In map" title="Stop alle flippo's in de map">📖 <span>Alles in de map</span></button>
   <button id="btn-close" data-short="Dicht" title="Klap de map dicht of open">📕 <span>Map dichtklappen</span></button>
   <button id="btn-turn" data-short="Omdraaien" title="Draai de dichte map om">🔄 <span>Map omdraaien</span></button>
@@ -33,7 +34,12 @@
   <div class="scene"><div class="world"></div></div>
   <div class="v3-hint">Sleep om te draaien · knijp of scroll om te zoomen</div>
 </div>
+<div id="chooser" hidden>
+  <h1>Welke map pak je?</h1>
+  <div class="ch-list"></div>
+</div>
 <div id="toast"></div>
-<script src="app.js?v=2"></script>
+<script src="flippos-data.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
