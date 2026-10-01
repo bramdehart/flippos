@@ -163,6 +163,7 @@ function applyLayout() {
   stage.style.width = L.W + 'px';
   stage.style.height = L.H + 'px';
   applyView();
+  sizePackButton();
   stage.style.setProperty('--u', L.u + 'px');
   stage.style.setProperty('--R', L.R + 'px');
   stage.style.setProperty('--ph', PAGE_H);
@@ -430,6 +431,9 @@ function buildAlbum() {
   }
   // omgekrulde hoekjes: hier pak je het blad vast om om te slaan
   album.insertAdjacentHTML('beforeend', '<div class="curl prev"></div><div class="curl next"></div>');
+  // tikken op een hoekje slaat ook om (slepen hoeft niet)
+  album.querySelector('.curl.prev').addEventListener('click', (e) => { e.stopPropagation(); turnPage(-1); });
+  album.querySelector('.curl.next').addEventListener('click', (e) => { e.stopPropagation(); turnPage(1); });
   // dikte van de dichte map: een stapel laagjes (het pak bladzijden) tussen achter- en voorkaft
   let slabs = '';
   for (let z = 1.5; z < BOOK_T * L.u; z += 1.5) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
@@ -568,7 +572,8 @@ function tableSpot() {
     // niet onder de voorwerpen in de hoeken van het scherm (zakje, stapeltje mappen, knopjes)
     const sr = stage.getBoundingClientRect(), tr = table.getBoundingClientRect();
     const px = sr.left + x * K() - tr.left, py = sr.top + y * K() - tr.top, rr = L.R * K();
-    if ((px - rr < 150 && py + rr > tr.height - 190) || (px - rr < 110 && py - rr < 120) || (px + rr > tr.width - 120 && py - rr < 70)) continue;
+    const pb = $('#btn-pack').getBoundingClientRect();
+    if ((px - rr < pb.right - tr.left - pb.width * 0.1 && py + rr > pb.top - tr.top + pb.height * 0.08) || (px - rr < 110 && py - rr < 120) || (px + rr > tr.width - 120 && py - rr < 70)) continue;
     let near = Infinity;
     for (const d of discs) if (d.slot == null) near = Math.min(near, Math.hypot(d.x - x, d.y - y));
     if (near > L.R * 2.1) return { x, y };
@@ -686,8 +691,27 @@ function animateTurn(from, to, oldSnap, manual) {
 
 const turnPage = (dir) => setPage(curPage + dir * (L.single ? 1 : 2));
 
+// alle losse flippo's of munten vallen stuiterend op tafel, met gekletter
+function rainDiscs(wait = 0) {
+  const loose = discs.filter((d) => d.slot == null).sort((a, b) => a.y - b.y + (Math.random() - 0.5) * 300);
+  if (!loose.length) return;
+  const step = Math.min(55, 900 / loose.length);
+  loose.forEach((d, i) => {
+    const delay = wait + i * step;
+    d.el.classList.remove('rain'); void d.el.offsetWidth;
+    d.el.style.animationDelay = delay + 'ms';
+    d.el.style.setProperty('--spin', Math.round(Math.random() * 500 - 250) + 'deg');
+    d.el.classList.add('rain');
+    clearTimeout(d.rainT);
+    d.rainT = setTimeout(() => { d.el.classList.remove('rain'); d.el.style.animationDelay = ''; }, delay + 950);
+  });
+  // één strooigeluid voor de hele hoop, vanaf het moment dat de eerste neerkomt
+  setTimeout(() => snd('strooi', Math.min(1, 0.35 + loose.length / 20)), wait + 330);
+}
+
 function setAlbum(state) {
   if (state === albumState) return;
+  if (state === 'open') rainDiscs(250);
   albumState = state;
   applyAlbumState(false);
   snd(state === 'open' ? 'flip' : 'put');
@@ -960,6 +984,16 @@ $('#btn-sweep').onclick = () => {
   save();
 };
 
+// hoogte van de zak in tafel-eenheden (de zak chips is groter dan een zakje)
+const packH = () => (L.mode === 'p' ? 760 : 500) * (FLIPPO ? 1.1 : 1);
+// de zak op tafel is even groot als wanneer hij in het midden staat, en steekt een stuk buiten beeld
+function sizePackButton() {
+  const btn = $('#btn-pack'), h = packH() * L.k;
+  btn.style.height = h + 'px';
+  btn.style.left = -h * SET.packRatio * 0.2 + 'px';
+  btn.style.bottom = -h * 0.3 + 'px';
+}
+
 // ---------- zakje openscheuren ----------
 let pack = null;
 const PACK_N = FLIPPO ? 5 : 3;   // zoveel flippo's per zak
@@ -969,7 +1003,7 @@ $('#btn-pack').onclick = () => {
   $('#btn-pack').classList.remove('nudge');
   makeRoom(PACK_N);
   const big = L.mode === 'p';
-  const h = (big ? 760 : 500) * (FLIPPO ? 1.1 : 1), w = h * SET.packRatio;   // de zak chips is groter dan het zakje
+  const h = packH(), w = h * SET.packRatio;
   const cy = L.H * (FLIPPO ? 0.46 : 0.5);   // de zak chips hangt wat hoger, zodat eronder ruimte is voor de chips
   // rafelige rand: het zakje bij de bovenste naad, de zak chips bij de onderste
   const cutY = FLIPPO ? 88 : 13;
@@ -1003,14 +1037,40 @@ $('#btn-pack').onclick = () => {
   }
   stage.append(dim, el);
   pack = { el, dim, w, h, min: null, max: null, start: null, done: false, push: FLIPPO, prog: 0, cy };
+  dim.addEventListener('click', closePack);   // ernaast tikken = toch niet openmaken
+  // het zakje dat op tafel lag vliegt zelf naar het midden
+  el.style.animation = 'none';   // eerst meten zonder de binnenkom-animatie
+  const btn = $('#btn-pack'), b = btn.getBoundingClientRect(), r = el.getBoundingClientRect();
+  btn.style.visibility = 'hidden';
+  el.style.animation = 'wiggle 1.6s ease-in-out .55s infinite';
+  const dx = (b.left + b.width / 2 - (r.left + r.width / 2)) / K(), dy = (b.top + b.height / 2 - (r.top + r.height / 2)) / K();
+  el.animate([
+    { transform: `translate(${dx}px, ${dy}px) scale(${b.height / r.height}) rotate(-14deg)` },
+    { transform: 'translate(0, 0) scale(1) rotate(0deg)' },
+  ], { duration: 480, easing: 'cubic-bezier(.3, 1.3, .5, 1)' });
   el.addEventListener('pointerdown', onPackDown);
   snd('put');
 };
 
+// na het openmaken ploft er een nieuw zakje op zijn plek op tafel
+function newPackOnTable() {
+  const btn = $('#btn-pack');
+  btn.style.visibility = '';
+  btn.animate([{ translate: '0 -60px', scale: '1.5', opacity: 0 }, { translate: '0 0', scale: '1', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.3, 1.5, .5, 1)' });
+}
+
+// zakje wegleggen zonder het open te maken
+function closePack() {
+  if (!pack || pack.done) return;
+  pack.el.remove(); pack.dim.remove(); pack = null;
+  $('#btn-pack').style.visibility = '';
+  snd('put');
+}
+
 // ligt de tafel vol, dan verdwijnen de oudste losse (liefst dubbele) flippo's
 function makeRoom(n) {
   const loose = discs.filter((d) => d.slot == null);
-  const over = loose.length + n - MAX_DISCS;
+  const over = loose.length + n - (L.single ? 24 : MAX_DISCS);   // op een klein scherm past er minder op tafel
   if (over <= 0) return;
   const count = (id) => discs.filter((d) => d.id === id).length;
   const rank = (d) => (d.links.length ? 2 : 0) + (count(d.id) > 1 ? 0 : 1);
@@ -1109,6 +1169,7 @@ function packOpen(fromLeft) {
   pack.done = true;
   const { el, dim, h, cy } = pack;
   el.classList.add('open');
+  el.style.animation = 'none';   // het wiebelen stopt, anders kan het zakje niet kantelen
   const top = el.querySelector('.pk-top');
   dim.classList.add('gone');
   snd('snap');
@@ -1136,8 +1197,8 @@ function packOpen(fromLeft) {
     const pool = fresh.length && Math.random() < 0.8 ? fresh : IDS;
     const id = pool[Math.floor(Math.random() * pool.length)];
     have.add(id);
-    // munten vallen soms op hun kop
-    const d = makeDisc(id, { x: L.W / 2, y: L.H / 2, rot: Math.round(Math.random() * 360), flipped: POKE && Math.random() < 0.4 });
+    // soms valt er een op zijn kop
+    const d = makeDisc(id, { x: L.W / 2, y: L.H / 2, rot: Math.round(Math.random() * 360), flipped: Math.random() < (POKE ? 0.4 : 0.3) });
     d.el.classList.add('stowed');
     got.push(nameOf(id) + (SHINY[id] ? ' ✨' : ''));
     setTimeout(() => {
@@ -1148,7 +1209,7 @@ function packOpen(fromLeft) {
       Object.assign(d, tableSpot(), { rot: Math.round(Math.random() * 60 - 30) });
       d.el.classList.add('fall');
       render(d);
-      snd('slot');
+      if (i === 0) snd('strooi', 0.6);   // één strooigeluid voor wat er uit de zak valt
       setTimeout(() => d.el.classList.remove('fall'), 700);
       save();
     }, 800 + i * 280);
@@ -1156,7 +1217,7 @@ function packOpen(fromLeft) {
   setTimeout(() => {
     el.classList.add('gone');
     toast('🎁 ' + got.join(', '));
-    setTimeout(() => { el.remove(); dim.remove(); pack = null; }, 500);
+    setTimeout(() => { el.remove(); dim.remove(); pack = null; newPackOnTable(); }, 500);
   }, 800 + PACK_N * 280 + 500);
 }
 
@@ -1309,14 +1370,18 @@ function sndPage() {
 }
 
 // echte opname van een omslaande bladzijde (Wikimedia Commons, publiek domein); wordt één keer geladen
-let pageBuf = null, pageBufAsked = false;
+// het strooigeluid is een opname van rinkelende munten (Wikimedia Commons, publiek domein)
+let pageBuf = null, strooiBuf = null, pageBufAsked = false;
 function loadPageSound() {
   if (pageBufAsked) return;
   pageBufAsked = true;
-  fetch('snd/page.mp3?v=2').then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b)).then((buf) => { pageBuf = buf; }).catch(() => {});
+  const get = (url) => fetch(url).then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b));
+  get('snd/page.mp3?v=2').then((buf) => { pageBuf = buf; }).catch(() => {});
+  get('snd/strooi.mp3').then((buf) => { strooiBuf = buf; if (strooiWant) { snd('strooi', strooiWant); strooiWant = 0; } }).catch(() => {});
 }
+let strooiWant = 0;
 
-function snd(type) {
+function snd(type, vol = 1) {
   if (!soundOn) return;
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
@@ -1332,7 +1397,19 @@ function snd(type) {
       src.start();
       return;
     }
-    const [f0, f1, dur, vol, wave] = {
+    if (type === 'strooi') {
+      if (!strooiBuf) { strooiWant = vol; return; }      // nog aan het laden: afspelen zodra hij er is
+      const src = ac.createBufferSource(), lp = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = strooiBuf;
+      // munten rinkelen helder; plastic flippo's klinken lager en doffer
+      src.playbackRate.value = POKE ? 1 : 0.72;
+      lp.type = 'lowpass'; lp.frequency.value = POKE ? 16000 : 4200;
+      g.gain.value = 0.5 * vol;
+      src.connect(lp).connect(g).connect(ac.destination);
+      src.start();
+      return;
+    }
+    const [f0, f1, dur, vol0, wave] = {
       snap: [1400, 500, 0.06, 0.25, 'square'],
       slot: [420, 140, 0.1, 0.3, 'triangle'],
       flip: [520, 880, 0.06, 0.12, 'sine'],
@@ -1344,7 +1421,7 @@ function snd(type) {
     o.type = wave;
     o.frequency.setValueAtTime(f0, t);
     o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    g.gain.setValueAtTime(vol, t);
+    g.gain.setValueAtTime(vol0, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(g).connect(ac.destination);
     o.start(t);
@@ -1407,7 +1484,7 @@ function showHelp() {
     !POKE && ['✂️', 'Dubbeltik', 'om een flippo weer los te maken'],
     ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
     [FLIPPO ? '🍟' : '🎁', FLIPPO ? 'Tik op de zak chips' : 'Tik op het zakje', `linksonder voor nieuwe ${meer}`],
-    ['📚', 'Tik op het stapeltje', 'linksboven om een andere map te pakken'],
+    ['‹', 'Tik op het pijltje', 'linksboven om een andere map te pakken'],
     ['🧹', 'Tik op de bezem', `rechtsonder om alle losse ${meer} van tafel te vegen`],
     ['🤏', 'Knijp', 'met twee vingers (of ctrl + scrollen) om in te zoomen'],
   ];
@@ -1416,10 +1493,26 @@ function showHelp() {
   box.hidden = false;
   try { localStorage.setItem('flippo-help-' + SET.kind, '1'); } catch { /* geen opslag */ }
 }
-$('#help').onclick = () => { $('#help').hidden = true; };
+const closeHelp = () => {
+  if ($('#help').hidden) return;
+  $('#help').hidden = true;
+  // lege tafel: nu pas de aanwijzing waar je begint, anders stond die achter de uitleg
+  if (!discs.length) toast(FLIPPO ? 'Open een zak chips om flippo\'s te krijgen!' : POKE ? 'Open een zakje om munten te krijgen!' : 'Open een zakje om Diskeyz te krijgen!');
+};
+$('#help').onclick = closeHelp;
+// Escape sluit wat er open staat
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('#help').hidden) closeHelp();
+  else if (v3) $('#view3d .v3-close').click();
+  else closePack();
+});
+// geen contextmenu bij lang indrukken (dat is 'groot bekijken')
+window.addEventListener('contextmenu', (e) => { if (e.target.closest('#table, #view3d')) e.preventDefault(); });
 $('#btn-help').onclick = showHelp;
 
 // ---------- overzicht: kies een map ----------
+let chooserDragged = 0;
 function showChooser() {
   const box = $('#chooser');
   box.hidden = false;
@@ -1435,7 +1528,12 @@ function showChooser() {
       `<u><i style="width:${Math.round(n / total * 100)}%"></i></u>` +
       `<em>${n} / ${total} in de map</em>`;
     card.dataset.key = key;
-    card.onclick = () => pickSet(key, card);
+    // de map in het midden pak je; een map ernaast schuift eerst naar het midden
+    card.onclick = () => {
+      if (performance.now() - chooserDragged < 300) return;
+      if (card.classList.contains('on')) pickSet(key, card);
+      else card.parentNode.scrollTo({ left: card.offsetLeft + card.offsetWidth / 2 - card.parentNode.clientWidth / 2, behavior: 'smooth' });
+    };
     box.querySelector('.ch-list').appendChild(card);
   }
   // losse flippo's die rond de mappen op tafel liggen
@@ -1459,7 +1557,30 @@ function showChooser() {
     let best = 0;
     cards.forEach((c, i) => { if (Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid) < Math.abs(cards[best].offsetLeft + cards[best].offsetWidth / 2 - mid)) best = i; });
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === best));
+    cards.forEach((c, i) => c.classList.toggle('on', i === best));
   };
+  const goTo = (c) => list.scrollTo({ left: c.offsetLeft + c.offsetWidth / 2 - list.clientWidth / 2, behavior: 'smooth' });
+  [...dots.children].forEach((d, i) => { d.onclick = () => goTo(cards[i]); });
+  // muis: scrollen of slepen schuift de mappen; pijltjestoetsen ook
+  list.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); list.scrollLeft += e.deltaY; } }, { passive: false });
+  let grab = null;
+  list.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') grab = { x: e.clientX, sl: list.scrollLeft, moved: false }; });
+  window.addEventListener('pointermove', (e) => {
+    if (!grab) return;
+    if (Math.abs(e.clientX - grab.x) > 6) { grab.moved = true; list.style.scrollSnapType = 'none'; }
+    if (grab.moved) list.scrollLeft = grab.sl - (e.clientX - grab.x);
+  });
+  window.addEventListener('pointerup', () => {
+    if (!grab) return;
+    if (grab.moved) { chooserDragged = performance.now(); list.style.scrollSnapType = ''; goTo(cards[[...dots.children].findIndex((d) => d.classList.contains('on'))]); }
+    grab = null;
+  });
+  window.addEventListener('keydown', (e) => {
+    const i = cards.findIndex((c) => c.classList.contains('on'));
+    if (e.key === 'ArrowRight' && cards[i + 1]) goTo(cards[i + 1]);
+    if (e.key === 'ArrowLeft' && cards[i - 1]) goTo(cards[i - 1]);
+    if (e.key === 'Enter' && cards[i]) pickSet(cards[i].dataset.key, cards[i]);
+  });
   list.addEventListener('scroll', mark, { passive: true });
   mark();
   const card = from && box.querySelector(`.ch-card[data-key="${from}"]`);
@@ -1557,13 +1678,13 @@ if (!SET) {
   // voorwerpen op tafel in plaats van knoppen
   const pk = $('#btn-pack');
   pk.hidden = false;
-  pk.style.backgroundImage = `url(${SET.pack})`;
+  pk.innerHTML = `<i class="bagimg" style="background-image:url(${SET.pack})"></i>`;   // plaatje in een eigen laag, zodat de schaduw van de knop heel blijft
   pk.style.aspectRatio = SET.packRatio;
   pk.title = FLIPPO ? `Zak chips: ${PACK_N} flippo's` : POKE ? 'Zakje met 3 munten' : 'Zakje met 3 Diskeyz';
   pk.classList.toggle('chips', FLIPPO);
   const home = $('#btn-home');
   home.hidden = false;
-  home.innerHTML = Object.values(SETS).filter((x) => x !== SET).map((x) => `<i style="background-image:url(${x.cover})"></i>`).join('');
+  home.textContent = '‹';
   $('#btn-sound').hidden = false;
   $('#btn-help').hidden = false;
   $('#btn-sweep').hidden = false;
@@ -1593,6 +1714,7 @@ if (!SET) {
     setTimeout(() => {
       document.body.classList.remove('intro');
       if (want !== 'front') { albumState = want; applyAlbumState(false); snd('flip'); }
+      rainDiscs(350);
     }, 140);
-  }
+  } else if (albumState === 'open') rainDiscs(200);
 }

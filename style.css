@@ -778,13 +778,13 @@ body {
 
 /* ---------- bolle zak chips ---------- */
 .pack.puffy { filter: drop-shadow(0 24px 22px rgba(0, 0, 0, .55)); }
-.pack.puffy .pk {
+.pack.puffy .pk, #btn-pack.chips .bagimg {
   border-radius: 0;
   /* kussenvorm: bij de naden iets ingesnoerd, in het midden bol */
   -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M3%2C0%20H97%20C97%2C4%20100%2C8%20100%2C14%20V86%20C100%2C92%2097%2C96%2097%2C100%20H3%20C3%2C96%200%2C92%200%2C86%20V14%20C0%2C8%203%2C4%203%2C0%20Z%27/%3E%3C/svg%3E") center / 100% 100% no-repeat;
   mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%20preserveAspectRatio%3D%27none%27%3E%3Cpath%20d%3D%27M3%2C0%20H97%20C97%2C4%20100%2C8%20100%2C14%20V86%20C100%2C92%2097%2C96%2097%2C100%20H3%20C3%2C96%200%2C92%200%2C86%20V14%20C0%2C8%203%2C4%203%2C0%20Z%27/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
-.pack.puffy .pk::after {
+.pack.puffy .pk::after, #btn-pack.chips .bagimg::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1342,3 +1342,119 @@ html, body { overflow-x: hidden; max-width: 100%; }
 
 /* zakje met kartelrand: het plaatje heeft zelf al doorzichtige tandjes, dus geen afgeronde hoeken */
 #btn-pack[style*="pack.webp"], .pack[style*="pack.webp"] .pk { border-radius: 0; }
+
+/* ---------- gebruiksgemak ---------- */
+html, body { -webkit-touch-callout: none; }
+.packdim { cursor: pointer; }
+/* het hoekje van de volgende bladzijde wipt af en toe op, zodat je ziet dat je kunt bladeren */
+.curl.next { animation: curlhint 5s ease-in-out 2s infinite; }
+@keyframes curlhint { 0%, 86%, 100% { transform: scale(1); } 91% { transform: scale(1.35); } 96% { transform: scale(1.1); } }
+.curl { cursor: pointer; }
+
+/* losse schijfjes vallen op tafel en stuiteren na */
+.disc.rain { animation: rain .9s both; }
+/* je kijkt recht van boven op tafel: een schijf komt dus van dichtbij (groot) naar de tafel (normaal) */
+@keyframes rain {
+  0% { scale: 5; rotate: var(--spin, 180deg); opacity: 0; animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+  12% { opacity: 1; }
+  48% { scale: 1; rotate: 0deg; animation-timing-function: cubic-bezier(.2, .7, .5, 1); }
+  62% { scale: 1.2; rotate: -7deg; animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+  76% { scale: 1; rotate: 0deg; animation-timing-function: cubic-bezier(.2, .7, .5, 1); }
+  85% { scale: 1.07; rotate: 3deg; animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+  92% { scale: 1; rotate: 0deg; }
+  96% { scale: 1.02; }
+  100% { scale: 1; rotate: 0deg; opacity: 1; }
+}
+.disc.rain { z-index: 9000 !important; }
+
+/* ---------- overzicht als schuiflijst, ook op een groot scherm ---------- */
+.ch-dots { display: flex; gap: 9px; position: relative; z-index: 1; transition: opacity .4s; }
+.ch-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(0, 0, 0, .22); transition: background .2s, transform .2s; cursor: pointer; }
+.ch-dots i.on { background: #111; transform: scale(1.35); }
+#chooser.fadeout .ch-dots { opacity: 0; }
+.ch-card { scale: .8; opacity: .6; transition: opacity .3s, scale .3s, transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+.ch-card.on, .ch-card.picked { scale: 1; opacity: 1; }
+#chooser.fadeout .ch-card:not(.picked) { opacity: 0; }
+@media (min-width: 641px) {
+  #chooser { padding-left: 0; padding-right: 0; }
+  .ch-list {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    --cw: min(340px, 34vh);   /* op een laag scherm kleinere mappen, zodat alles past */
+    padding: 30px calc(50% - var(--cw) / 2) 26px;
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    align-items: center;
+    cursor: grab;
+  }
+  .ch-list::-webkit-scrollbar { display: none; }
+  .ch-card { flex: 0 0 var(--cw); width: var(--cw); max-width: none; padding: 0 calc(var(--cw) * .09); scroll-snap-align: center; }
+  .ch-card b { font-size: 22px; }
+  .ch-card span, .ch-card em { font-size: 15px; }
+}
+
+.ch-decos { z-index: 0; }
+.ch-list { z-index: 2; }
+
+/* disclaimer weggestopt achter een klein knopje rechtsonder in het overzicht */
+.about { position: absolute; right: 12px; bottom: 10px; z-index: 5; font-size: 12px; color: #5a5344; transition: opacity .4s; }
+.about summary { list-style: none; cursor: pointer; text-align: right; opacity: .7; }
+.about summary::-webkit-details-marker { display: none; }
+.about summary:hover, .about[open] summary { opacity: 1; }
+#chooser .about .disclaimer { position: absolute; right: 0; bottom: 24px; width: min(360px, calc(100vw - 24px)); margin: 0; text-align: left; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
+#chooser.fadeout .about { opacity: 0; }
+
+/* het zakje ligt los op tafel, een eindje uit de hoek en wat schever */
+#btn-pack {
+  --tilt: -14deg;
+  left: clamp(26px, 6vw, 110px);
+  bottom: clamp(30px, 8vh, 90px);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)) drop-shadow(0 12px 12px rgba(0, 0, 0, .3));
+}
+@keyframes nudge {
+  0%, 60%, 100% { transform: rotate(-14deg); }
+  70% { transform: rotate(-21deg) scale(1.08); }
+  80% { transform: rotate(-8deg) scale(1.08); }
+  90% { transform: rotate(-17deg) scale(1.04); }
+}
+@keyframes packshake {
+  0%, 100% { transform: translateY(-10px) rotate(-14deg) scale(1.14); }
+  25% { transform: translateY(-16px) rotate(-22deg) scale(1.16); }
+  50% { transform: translateY(-8px) rotate(-8deg) scale(1.14); }
+  75% { transform: translateY(-15px) rotate(-18deg) scale(1.16); }
+}
+
+/* het zakje op tafel: plaatje in een eigen laag; de zak chips is ook hier bol, net als in het midden */
+#btn-pack { background: none !important; border-radius: 0; }
+#btn-pack .bagimg { position: absolute; inset: 0; background: center / 100% 100% no-repeat; border-radius: 6px; }
+#btn-pack .bagimg[style*=".webp"], #btn-pack.chips .bagimg { border-radius: 0; }
+#btn-pack:not(.chips) .bagimg:not([style*=".webp"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(255, 255, 255, .28), transparent 30%, transparent 70%, rgba(0, 0, 0, .18));
+  border-radius: 6px;
+}
+
+/* terug naar het overzicht: een eenvoudig pijltje linksboven */
+#btn-home {
+  left: 14px;
+  top: 14px;
+  width: 40px;
+  height: 40px;
+  aspect-ratio: auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .55);
+  color: #4a4438;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 34px;
+  padding: 0 3px 4px 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .25);
+}
+#btn-home:hover { transform: scale(1.1); }

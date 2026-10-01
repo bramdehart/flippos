@@ -96,7 +96,7 @@ Er is ook een reclamespot van 80 seconden in de stijl van een speelgoedreclame u
 | Een bladzijde opzij slepen | Bladzijde omslaan |
 | De kaft opzij slepen | Map dichtslaan, openslaan of omdraaien |
 | Tikken op het zakje of de zak chips | Nieuwe flippo's openmaken |
-| Tikken op het stapeltje mappen | Terug naar de tafel met de drie mappen |
+| Tikken op het pijltje linksboven | Terug naar het overzicht met de mappen |
 | Twee keer tikken op de bezem | Alle losse flippo's van tafel vegen; de map blijft |
 | Knijpen, of ctrl + scrollen | In- en uitzoomen |
 

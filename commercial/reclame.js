@@ -11,6 +11,8 @@ const IMG = '../img/';
 const f1 = (n) => `${IMG}flippo-1/${String(n).padStart(3, '0')}.webp`;
 const f2 = (n) => `${IMG}flippo-2/${String(n).padStart(3, '0')}.webp`;
 const fsrc = (n) => (n <= 250 ? f1(n) : f2(n));
+const pk = (n) => `${IMG}pokemon/${String(n).padStart(2, '0')}.webp`;
+const COVERS = [[`${IMG}flippo-1/cover.jpg`, '1995', ''], [`${IMG}flippo-2/cover.jpg`, '1996', ''], [`${IMG}pokemon/cover.jpg`, '2001', 'pk'], [`${IMG}diskeyz/cover.jpg`, '2026', 'dk']];
 const dk = (n) => `${IMG}diskeyz/${String(n).padStart(2, '0')}.jpg`;
 const BOUNCE = 'cubic-bezier(.3,1.6,.5,1)';
 
@@ -103,7 +105,7 @@ function flash(root, o = .85) { const f = mk(root, 'flash'); A(f, [{ opacity: o 
 
 // dichte map
 function book(root, cover, w, x, y, cls = '') {
-  const h = w * 1.475;
+  const h = w * (cls === 'pk' ? 1.11 : 1.475);   // de Pokémon-map is lager
   // de rug in pixels: een percentage zou van de breedte van het hele beeld uitgaan
   const b = mk(root, 'book ' + cls, `width:${w}px;height:${h}px;left:${x - w / 2}px;top:${y - h / 2}px;padding-left:${w * .05}px`);
   img(b, cover);
@@ -177,26 +179,26 @@ add(0, ['01', .5], () => {
   });
 });
 
-// 2 · DRIE MAPPEN – WELKE PAK JIJ?
+// 2 · VIER MAPPEN – WELKE PAK JIJ?
 add(5, ['02', .3], () => {
   const c = scene();
-  const covers = [[`${IMG}flippo-1/cover.jpg`, '1995', ''], [`${IMG}flippo-2/cover.jpg`, '1996', ''], [`${IMG}diskeyz/cover.jpg`, '2026', 'dk']];
-  const books = covers.map(([src, year, cls], i) => {
-    const x = 400 + i * 400, rot = [-5, 3, -2][i];
-    const b = book(c, src, 300, x, 500, cls);
-    A(b, [{ transform: `translateY(-900px) rotate(${rot + 25}deg) scale(1.4)` }, { transform: `translateY(0) rotate(${rot}deg) scale(1)` }], { duration: 480, delay: 100 + i * 190, easing: BOUNCE });
-    at(380 + i * 190, () => { sfx('thud'); b._s = sticker(c, year, x + 130, 300, 120, 10); });
+  const books = COVERS.map(([src, year, cls], i) => {
+    const x = 245 + i * 370, rot = [-5, 3, -4, 2][i];
+    const b = book(c, src, 262, x, 500, cls);
+    A(b, [{ transform: `translateY(-900px) rotate(${rot + 25}deg) scale(1.4)` }, { transform: `translateY(0) rotate(${rot}deg) scale(1)` }], { duration: 480, delay: 100 + i * 150, easing: BOUNCE });
+    at(380 + i * 150, () => { sfx('thud'); b._s = sticker(c, year, x + 112, cls === 'pk' ? 360 : 312, 104, 10); });
     return b;
   });
   let w;
-  at(450, () => { w = word(c, 'DRIE MAPPEN!', 800, 120, 150, -3); });
+  at(450, () => { w = word(c, 'VIER MAPPEN!', 800, 120, 150, -3); });
   at(2500, () => { wordOut(w); w = word(c, 'WELKE PAK JIJ?', 800, 120, 150, 3); books.forEach((b, i) => A(b, [{ translate: '0 0' }, { translate: '0 -40px' }, { translate: '0 0' }], { duration: 330, delay: i * 110, fill: 'none', easing: 'ease-in-out' })); });
   at(3700, () => {
     wordOut(w); sfx('whoosh');
     books.forEach((b) => b._s?.remove());
-    A(books[1], [{ transform: 'rotate(3deg)' }, { transform: 'translate(300px,1100px) rotate(80deg)' }], { duration: 420, easing: 'ease-in' });
-    A(books[2], [{ transform: 'rotate(-2deg)' }, { transform: 'translate(900px,-300px) rotate(-70deg)' }], { duration: 420, easing: 'ease-in' });
-    A(books[0], [{ transform: 'rotate(-5deg) scale(1)' }, { transform: 'translate(590px,-50px) rotate(0deg) scale(1.38)' }], { duration: 480, easing: 'cubic-bezier(.4,0,.2,1.3)' });
+    A(books[1], [{ transform: 'rotate(3deg)' }, { transform: 'translate(-200px,1100px) rotate(80deg)' }], { duration: 420, easing: 'ease-in' });
+    A(books[2], [{ transform: 'rotate(-4deg)' }, { transform: 'translate(300px,1100px) rotate(-60deg)' }], { duration: 420, easing: 'ease-in' });
+    A(books[3], [{ transform: 'rotate(2deg)' }, { transform: 'translate(900px,-300px) rotate(-70deg)' }], { duration: 420, easing: 'ease-in' });
+    A(books[0], [{ transform: 'rotate(-5deg) scale(1)' }, { transform: 'translate(745px,-50px) rotate(0deg) scale(1.58)' }], { duration: 480, easing: 'cubic-bezier(.4,0,.2,1.3)' });
   });
   at(4250, () => {
     books[0].remove();
@@ -386,20 +388,26 @@ add(45, ['09', .3], () => {
   void w;
 });
 
-// 10 · OOK DE DISKEYZ DOEN MEE
-add(52.5, ['10', .35], () => {
+// 10 · OOK DE DISKEYZ EN DE POKÉMON-MUNTEN DOEN MEE
+add(52.5, ['10', .12], () => {
   const c = scene();
   rays(c, 'rgba(27,99,201,.2)');
-  const b = book(c, `${IMG}diskeyz/cover.jpg`, 330, 400, 510, 'dk');
-  A(b, [{ transform: 'translateX(-900px) rotate(-40deg)' }, { transform: 'translateX(0) rotate(-5deg)' }], { duration: 450, easing: BOUNCE });
-  at(420, () => { sticker(c, '2026', 560, 290, 130, 12); sfx('thud'); });
-  [2, 25, 21, 17, 1, 12, 15, 30, 9, 22, 6, 28].forEach((id, i) => {
-    const x = 800 + (i % 4) * 185, y = 330 + Math.floor(i / 4) * 185, e = fl(c, dk(id), 160, x, y);
+  const b1 = book(c, `${IMG}diskeyz/cover.jpg`, 270, 215, 520, 'dk');
+  A(b1, [{ transform: 'translateX(-900px) rotate(-40deg)' }, { transform: 'translateX(0) rotate(-6deg)' }], { duration: 450, easing: BOUNCE });
+  const b2 = book(c, `${IMG}pokemon/cover.jpg`, 290, 1385, 520, 'pk');
+  A(b2, [{ transform: 'translateX(900px) rotate(40deg)' }, { transform: 'translateX(0) rotate(6deg)' }], { duration: 450, delay: 120, easing: BOUNCE });
+  at(420, () => { sticker(c, '2026', 330, 330, 112, 12); sfx('thud'); });
+  at(560, () => { sticker(c, '2001', 1510, 365, 112, -10); sfx('thud'); });
+  // links Diskeyz, rechts munten; de laatste munt ligt op zijn kop
+  [dk(2), dk(25), pk(5), pk(2), dk(21), dk(17), pk(12), pk(23), dk(1), dk(12), pk(9), `${IMG}pokemon/back.webp`].forEach((src, i) => {
+    const x = 500 + (i % 4) * 200, y = 345 + Math.floor(i / 4) * 185, e = fl(c, src, 165, x, y);
     A(e, [{ transform: `translateY(-900px) rotate(${rr(-300, 300)}deg)` }, { transform: `translateY(0) rotate(${rr(-12, 12)}deg)` }], { duration: 480, delay: 150 + i * 70, easing: BOUNCE });
     A(e, [{ translate: '0 0' }, { translate: '0 -18px' }], { duration: rr(240, 340), delay: 800 + i * 70, iterations: Infinity, direction: 'alternate', fill: 'none', easing: 'ease-in-out' });
   });
   sfx('boing', 300); sfx('boing', 700);
-  at(400, () => word(c, 'DISKEYZ DOEN MEE!', 800, 110, 132, -3));
+  let w;
+  at(300, () => { w = word(c, 'DISKEYZ…', 800, 112, 150, -3); });
+  at(1700, () => { wordOut(w); word(c, '…EN POKÉMON-MUNTEN!', 800, 112, 112, 3); sfx('sparkle'); });
 });
 
 // 11 · KLAP DICHT EN DRAAI OM
@@ -460,13 +468,13 @@ add(69.5, ['13', .45], () => {
 add(73, null, () => {
   const c = scene();
   rays(c, 'rgba(255,225,0,.22)', 16000);
-  [[`${IMG}flippo-1/cover.jpg`, '1995', ''], [`${IMG}flippo-2/cover.jpg`, '1996', ''], [`${IMG}diskeyz/cover.jpg`, '2026', 'dk']].forEach(([src, year, cls], i) => {
-    const x = 400 + i * 400, rot = [-5, 3, -3][i], b = book(c, src, 262, x, 455, cls);
+  COVERS.forEach(([src, year, cls], i) => {
+    const x = 320 + i * 320, rot = [-5, 3, -4, 3][i], b = book(c, src, 232, x, 455, cls);
     A(b, [{ transform: `translateY(900px) rotate(${rot - 30}deg)` }, { transform: `translateY(0) rotate(${rot}deg)` }], { duration: 480, delay: 250 + i * 150, easing: BOUNCE });
     A(b, [{ translate: '0 0' }, { translate: '0 -12px' }], { duration: 520 + i * 60, delay: 900, iterations: Infinity, direction: 'alternate', fill: 'none', easing: 'ease-in-out' });
-    at(600 + i * 150, () => { sticker(c, year, x + 118, 290, 104, 10); sfx('thud'); });
+    at(600 + i * 150, () => { sticker(c, year, x + 100, cls === 'pk' ? 340 : 295, 92, 10); sfx('thud'); });
   });
-  [[1, 120, 230], [6, 1480, 250], [255, 150, 640], [12, 1470, 620], [3, 215, 440], [14, 1400, 440]].forEach(([id, x, y], i) => {
+  [[1, 95, 230], [6, 1505, 250], [255, 110, 640], [12, 1490, 630], [3, 80, 440], [14, 1520, 440]].forEach(([id, x, y], i) => {
     const e = fl(c, fsrc(id), 130, x, y);
     A(e, [{ transform: 'scale(0) rotate(-200deg)' }, { transform: `scale(1) rotate(${rr(-20, 20)}deg)` }], { duration: 420, delay: 500 + i * 80, easing: BOUNCE });
   });
@@ -478,7 +486,7 @@ add(73, null, () => {
     sfx('sparkle');
   });
   at(1700, () => {
-    const d = mk(c, 'small', '', 'Dit is een hobbyproject en geen officieel product van Smiths, Albert Heijn, Disney, Pixar of Warner Bros.');
+    const d = mk(c, 'small', '', 'Dit is een hobbyproject en geen officieel product van Smiths, Albert Heijn, Disney, Pixar, Warner Bros. of Nintendo.');
     A(d, [{ opacity: 0 }, { opacity: 1 }], { duration: 400 });
   });
 });

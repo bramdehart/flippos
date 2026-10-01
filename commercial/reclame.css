@@ -244,3 +244,5 @@ html, body {
 #start.again { inset: 18px 18px auto auto; background: none; display: block; }
 #start.again .start-logo, #start.again p { display: none; }
 #start.again #play { font-size: 18px; padding: 8px 22px; border-width: 4px; }
+
+.book.pk { background: linear-gradient(90deg, #7d0c14, #e8212b 30%, #ff6a6f 50%, #e8212b 70%, #7d0c14) 0 0 / 5.5% 100% no-repeat, #b3121c; box-shadow: 0 0 0 5px #b3121c, 0 22px 34px rgba(0, 0, 0, .45); }
