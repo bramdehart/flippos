@@ -79,3 +79,4 @@ Ga naar [flippos.bramdehart.nl](https://flippos.bramdehart.nl). Je spel wordt va
 | Knijpen, of ctrl + scrollen | In- en uitzoomen |
 | Tikken op het zakje of de zak chips | Nieuwe flippo's openmaken |
 | Tikken op het stapeltje mappen | Een andere map pakken |
+| Twee keer tikken op de bezem | Alle losse flippo's van tafel vegen |

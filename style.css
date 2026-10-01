@@ -791,8 +791,8 @@ body {
   background:
     radial-gradient(ellipse 34% 26% at 30% 27%, rgba(255, 255, 255, .6), transparent 70%),
     radial-gradient(ellipse 16% 30% at 78% 62%, rgba(255, 255, 255, .22), transparent 70%),
-    linear-gradient(90deg, rgba(0, 0, 0, .55), transparent 20%, rgba(255, 255, 255, .1) 45%, transparent 76%, rgba(0, 0, 0, .6)),
-    linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 13%, transparent 85%, rgba(0, 0, 0, .55)),
+    linear-gradient(90deg, rgba(0, 0, 0, .36), transparent 20%, rgba(255, 255, 255, .1) 45%, transparent 76%, rgba(0, 0, 0, .4)),
+    linear-gradient(180deg, rgba(0, 0, 0, .32), transparent 13%, transparent 85%, rgba(0, 0, 0, .36)),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 7px) top / 100% 5% no-repeat,
     repeating-linear-gradient(90deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 7px) bottom / 100% 5% no-repeat;
 }
@@ -942,7 +942,7 @@ body {
 .curl.next { right: 0; background: linear-gradient(315deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); border-top-left-radius: 100% 100%; clip-path: polygon(100% 0, 0 100%, 0 0); transform-origin: 100% 100%; }
 .curl.prev { left: 0; background: linear-gradient(45deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); clip-path: polygon(0 0, 100% 100%, 100% 0); transform-origin: 0 100%; }
 .curl:hover { transform: scale(1.25); }
-.album.closed .curl, .album:has(.turnlayer) .curl { display: none; }
+.album.closed .curl, .album.opening .curl, .album:has(.turnlayer) .curl { display: none; }
 .page { cursor: grab; }
 
 /* dikte van de dichte map (zie je als hij omdraait) */
@@ -1079,3 +1079,105 @@ body.intro .obj { transition: none; }
   text-align: center;
   line-height: 1.3;
 }
+
+/* bezem rechtsonder: veegt de losse flippo's van tafel */
+#btn-sweep {
+  right: 14px;
+  bottom: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .55);
+  font-size: 27px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .25);
+}
+.disc.swept { transition: transform .6s cubic-bezier(.5, 0, .9, .6), opacity .6s; opacity: 0; pointer-events: none; }
+
+/* ---------- speelser overzicht: mappen liggen scheef op tafel tussen losse flippo's ---------- */
+#chooser h1 {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(30px, 6vw, 58px);
+  font-weight: 900;
+  font-style: italic;
+  color: #ffe100;
+  -webkit-text-stroke: clamp(5px, .9vw, 9px) #111;
+  paint-order: stroke fill;
+  transform: rotate(-3deg);
+  text-shadow: 0 6px 0 rgba(0, 0, 0, .18);
+}
+.ch-list { position: relative; z-index: 1; }
+.ch-card { transition: opacity .4s, transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+.ch-card:nth-child(1) { --rot: -5deg; }
+.ch-card:nth-child(2) { --rot: 3deg; }
+.ch-card:nth-child(3) { --rot: -2deg; }
+.ch-card:hover { transform: translateY(-12px) scale(1.04); }
+.ch-book { transform-origin: 0 0; transform: rotate(var(--rot, 0deg)); transition: transform .25s; }
+.ch-card:hover .ch-book { transform: rotate(0deg); }
+.ch-card b { margin-top: 6px; }
+.ch-card u {
+  display: block;
+  width: 78%;
+  height: 9px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, .16);
+  overflow: hidden;
+  text-decoration: none;
+  transition: opacity .4s;
+}
+.ch-card u i { display: block; height: 100%; min-width: 4px; border-radius: 99px; background: linear-gradient(90deg, #ffd23f, #ff8a1f); }
+#chooser.fadeout .ch-card u, #chooser.fadeout .ch-deco { opacity: 0; }
+.ch-deco {
+  position: absolute;
+  width: clamp(54px, 8vw, 96px);
+  aspect-ratio: 1;
+  margin: calc(clamp(54px, 8vw, 96px) / -2);
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .4));
+  transform: rotate(var(--r));
+  animation: decowig 5s ease-in-out infinite;
+  transition: opacity .4s;
+  pointer-events: none;
+}
+.ch-deco.round { border-radius: 50%; }
+@keyframes decowig { 50% { transform: rotate(calc(var(--r) + 14deg)) translateY(-5px); } }
+#chooser.enter .ch-card { animation: plop .55s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+#chooser.enter .ch-card:nth-child(2) { animation-delay: .1s; }
+#chooser.enter .ch-card:nth-child(3) { animation-delay: .2s; }
+@keyframes plop { from { opacity: 0; transform: translateY(-70px) scale(1.25) rotate(8deg); } }
+@media (max-width: 640px) { .ch-deco { opacity: .55; } .ch-card:nth-child(3) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 9px); } }
+
+/* ---------- speelsere zak: titel in logostijl en losse chips eromheen ---------- */
+.pk-hint {
+  font-size: calc(22px + 18px * var(--hs, 1));
+  font-weight: 900;
+  font-style: italic;
+  color: #ffe100;
+  -webkit-text-stroke: 6px #111;
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 rgba(0, 0, 0, .25);
+  transform: translateX(-50%) rotate(-3deg);
+  animation: hintin .5s cubic-bezier(.3, 1.6, .5, 1) .25s backwards;
+}
+.pk-hint small {
+  display: inline-block;
+  margin-top: 6px;
+  font-style: normal;
+  font-weight: 700;
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .7);
+}
+@keyframes hintin { from { opacity: 0; transform: translateX(-50%) rotate(-10deg) scale(.5); } }
+.pk-deco {
+  position: absolute;
+  width: 22%;
+  aspect-ratio: 1;
+  margin: -11%;
+  background: center / contain no-repeat;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .45));
+  transform: rotate(var(--r));
+  animation: decowig 4s ease-in-out infinite;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+.pack.open .pk-deco { opacity: 0; }

@@ -570,6 +570,13 @@ function applyAlbumState(instant) {
   else {
     discs.forEach((d) => d.slot != null && d.el.classList.add('stowed'));
     applyAlbumState.t = setTimeout(set, open ? 550 : 0);
+    // omgekrulde hoekjes pas tonen als de kaft helemaal openligt
+    if (open) {
+      const el = albumEl;
+      el.classList.add('opening');
+      clearTimeout(applyAlbumState.o);
+      applyAlbumState.o = setTimeout(() => el.classList.remove('opening'), 750);
+    }
   }
 }
 
@@ -895,6 +902,32 @@ window.addEventListener('pointermove', (e) => {
 });
 
 // ---------- knoppen ----------
+// ---------- tafel leegvegen ----------
+// Veegt alle losse flippo's (ook bouwwerken) van tafel. Wat in de map zit blijft.
+let sweepArmed = -1e9;
+$('#btn-sweep').onclick = () => {
+  const loose = discs.filter((d) => d.slot == null);
+  if (!loose.length) return toast('De tafel is al leeg');
+  const now = performance.now();
+  if (now - sweepArmed > 3500) {          // eerst vragen: weg is weg
+    sweepArmed = now;
+    return toast(`Tik nog een keer om ${loose.length} losse flippo's van tafel te vegen`);
+  }
+  sweepArmed = -1e9;
+  for (const d of loose) {
+    d.links = [];
+    discs.splice(discs.indexOf(d), 1);
+    d.el.classList.add('swept');
+    d.x = L.W + L.R * 4 + Math.random() * 200;
+    d.y += (Math.random() - 0.5) * 160;
+    d.rot += 200 + Math.random() * 300;
+    render(d);
+    setTimeout(() => d.el.remove(), 650);
+  }
+  snd('page');
+  save();
+};
+
 // ---------- zakje openscheuren ----------
 let pack = null;
 const PACK_N = FLIPPO ? 5 : 3;   // zoveel flippo's per zak
@@ -904,8 +937,8 @@ $('#btn-pack').onclick = () => {
   $('#btn-pack').classList.remove('nudge');
   makeRoom(PACK_N);
   const big = L.mode === 'p';
-  const h = (big ? 760 : 500) * (FLIPPO ? 1.3 : 1), w = h * SET.packRatio;   // de zak chips is groter dan het zakje
-  const cy = L.H * (FLIPPO ? 0.4 : 0.5);   // de zak chips hangt wat hoger, zodat eronder ruimte is voor de chips
+  const h = (big ? 760 : 500) * (FLIPPO ? 1.1 : 1), w = h * SET.packRatio;   // de zak chips is groter dan het zakje
+  const cy = L.H * (FLIPPO ? 0.46 : 0.5);   // de zak chips hangt wat hoger, zodat eronder ruimte is voor de chips
   // rafelige rand: het zakje bij de bovenste naad, de zak chips bij de onderste
   const cutY = FLIPPO ? 88 : 13;
   const pts = [];
@@ -926,7 +959,10 @@ $('#btn-pack').onclick = () => {
       `<div class="pk pk-flap l" style="clip-path:polygon(${pts.slice(0, 8).join(',')},50% 100%,0 100%)"></div>` +
       `<div class="pk pk-flap r" style="clip-path:polygon(${pts.slice(7).join(',')},100% 100%,50% 100%)"></div>` +
       `</div>` +
-      hint('Pop de zak chips open!', 'knijp in het midden van de zak');
+      hint('Pop de zak chips open!', 'knijp in het midden van de zak') +
+      // losse chips die rond de zak liggen te wiebelen
+      [[-34, 12], [-22, 58], [-40, 88], [128, 20], [118, 66], [138, 96], [-12, 104], [108, 108]].map(([x, y], i) =>
+        `<i class="pk-deco" style="left:${x}%;top:${y}%;--r:${i * 53 % 80 - 40}deg;animation-delay:${-i * 0.6}s;background-image:url(${SET.dir}/chip-${1 + (i % 5)}.webp)"></i>`).join('');
   } else {
     el.innerHTML =
       `<div class="pk pk-body" style="clip-path:polygon(${edge},100% 100%,0 100%)"></div>` +
@@ -1338,6 +1374,7 @@ function showHelp() {
     ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
     [FLIPPO ? '🍟' : '🎁', FLIPPO ? 'Tik op de zak chips' : 'Tik op het zakje', 'linksonder voor nieuwe flippo\'s'],
     ['📚', 'Tik op het stapeltje', 'linksboven om een andere map te pakken'],
+    ['🧹', 'Tik op de bezem', 'rechtsonder om alle losse flippo\'s van tafel te vegen'],
     ['🤏', 'Knijp', 'met twee vingers (of ctrl + scrollen) om in te zoomen'],
   ];
   const box = $('#help');
@@ -1361,11 +1398,18 @@ function showChooser() {
     card.className = 'ch-card';
     card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt=""></div><b>${set.title}</b>` +
       `<span>${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : '30 Diskeyz'}</span>` +
+      `<u><i style="width:${Math.round(n / total * 100)}%"></i></u>` +
       `<em>${n} / ${total} in de map</em>`;
     card.dataset.key = key;
     card.onclick = () => pickSet(key, card);
     box.querySelector('.ch-list').appendChild(card);
   }
+  // losse flippo's die rond de mappen op tafel liggen
+  const deco = [[6, 14, 'flippo-1/001.webp'], [15, 70, 'flippo-1/006.webp'], [4, 44, 'diskeyz/25.jpg'], [27, 90, 'flippo-2/255.webp'],
+    [90, 12, 'diskeyz/02.jpg'], [95, 46, 'flippo-1/044.webp'], [86, 78, 'flippo-1/130.webp'], [72, 93, 'diskeyz/17.jpg'],
+    [50, 95, 'flippo-2/341.webp'], [38, 6, 'diskeyz/11.jpg'], [66, 5, 'flippo-1/060.webp'], [12, 92, 'diskeyz/21.jpg']];
+  box.insertAdjacentHTML('afterbegin', deco.map(([x, y, f], i) =>
+    `<img class="ch-deco${f.endsWith('.jpg') ? ' round' : ''}" src="img/${f}" alt="" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s">`).join(''));
   // terug uit een map: die kaft komt van de tafel teruggevlogen, de andere mappen verschijnen weer
   let from = null;
   try { from = sessionStorage.getItem('flippo-from'); sessionStorage.removeItem('flippo-from'); } catch { /* geen opslag */ }
@@ -1381,7 +1425,7 @@ function showChooser() {
     book.style.transform = '';
     box.classList.remove('fadeout');
     setTimeout(() => { card.classList.remove('picked'); book.style.transition = ''; }, 650);
-  }
+  } else box.classList.add('enter');   // gewoon binnenkomen: de mappen ploffen één voor één op tafel
 }
 
 // waar ligt de dichte map op tafel? (schermcoördinaten van de voorkaft, inclusief de rug)
@@ -1397,7 +1441,12 @@ function coverRect() {
 }
 // verplaatsing en schaal waarmee een kaft uit het overzicht precies op die plek komt
 function flyTransform(book) {
+  // meten zonder de scheve ligging van de kaft in het overzicht
+  const keep = [book.style.transition, book.style.transform];
+  book.style.transition = 'none'; book.style.transform = 'none';
   const r = book.getBoundingClientRect(), t = coverRect();
+  [book.style.transition, book.style.transform] = keep;
+  void book.offsetWidth;
   return `translate(${t.left - r.left}px, ${t.top - r.top}px) scale(${t.width / r.width}, ${t.height / r.height})`;
 }
 
@@ -1405,6 +1454,7 @@ function flyTransform(book) {
 function pickSet(key, card) {
   const box = $('#chooser');
   if (box.classList.contains('fadeout')) return;
+  box.classList.remove('enter');
   card.classList.add('picked');
   box.classList.add('fadeout');
   const book = card.querySelector('.ch-book');
@@ -1454,6 +1504,7 @@ if (!SET) {
   home.innerHTML = Object.values(SETS).filter((x) => x !== SET).map((x) => `<i style="background-image:url(${x.cover})"></i>`).join('');
   $('#btn-sound').hidden = false;
   $('#btn-help').hidden = false;
+  $('#btn-sweep').hidden = false;
   applyLayout();
   if (!load()) {
     if (FLIPPO) toast('Open een zak chips om flippo\'s te krijgen!');
