@@ -595,3 +595,12 @@ body {
 .d3 .face { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .d3 .front { display: block; transform: translateZ(.6px); }
 .d3 .back { display: grid; transform: rotateY(180deg) translateZ(.6px); }
+
+/* Dichte map: inhoud van de pagina's echt verbergen. Alleen op backface-visibility
+   vertrouwen is niet genoeg: Safari tekent de vakjes dan dwars door de kaft heen. */
+.page > * { transition: visibility 0s linear 0s; }
+.album:not(.closed) .leaf.left .page > * { transition-delay: .35s; }
+.album.closed .page > * { visibility: hidden; }
+.album.closed .leaf.left .page > * { transition-delay: .35s; }
+.album.closed .leaf.right .page > * { transition-delay: .65s; }
+.album.single .page > * { transition-delay: 0s !important; }
