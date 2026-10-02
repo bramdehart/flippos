@@ -1102,7 +1102,7 @@ body.intro .obj { transition: none; }
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(10, 25, 60, .55);
+  background: rgba(47, 42, 32, .6);
   cursor: pointer;
 }
 #help[hidden] { display: none; }
@@ -1474,13 +1474,6 @@ html, body { -webkit-touch-callout: none; }
 .ch-decos { z-index: 0; }
 .ch-list { z-index: 2; }
 
-/* disclaimer weggestopt achter een klein knopje rechtsonder in het overzicht */
-.about { position: absolute; right: 12px; bottom: 10px; z-index: 5; font-size: 12px; color: #5a5344; transition: opacity .4s; }
-.about summary { list-style: none; cursor: pointer; text-align: right; opacity: .7; }
-.about summary::-webkit-details-marker { display: none; }
-.about summary:hover, .about[open] summary { opacity: 1; }
-#chooser .about .disclaimer { position: absolute; right: 0; bottom: 24px; width: min(360px, calc(100vw - 24px)); margin: 0; text-align: left; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-#chooser.fadeout .about { opacity: 0; }
 
 /* het zakje ligt los op tafel, een eindje uit de hoek en wat schever */
 #btn-pack {
@@ -1613,3 +1606,128 @@ html, body { -webkit-touch-callout: none; }
    (door de z-index boven het 3D-blad) en die worden na het omslaan pas na ~0,3 s opnieuw getekend:
    de bladzijde stond dan even leeg. */
 .leaf > .page { transform: translateZ(0); isolation: isolate; }
+
+/* ---------- kaartjes en meldingen in dezelfde stripstijl als de titel: crème papier, zwarte rand, gele koppen ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(47, 42, 32, .6);
+  cursor: pointer;
+}
+.modal[hidden] { display: none; }
+.help-card {
+  background:
+    radial-gradient(circle, rgba(60, 50, 20, .1) 0 1px, transparent 1.6px) 0 0 / 14px 14px,
+    #fff8e1;
+  border: 3px solid #111;
+  border-radius: 22px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .3);
+  transform: rotate(-.6deg);
+  color: #2f2a20;
+  width: min(460px, 100%);
+}
+.help-card h2 {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: clamp(26px, 6vw, 34px);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.05;
+  color: #ffe100;
+  -webkit-text-stroke: 6px #111;
+  paint-order: stroke fill;
+  transform: rotate(-2deg);
+  text-shadow: 0 4px 0 rgba(0, 0, 0, .18);
+}
+.help-list { gap: 10px; }
+.help-list li { align-items: center; }
+.help-list span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffe100;
+  border: 2px solid #111;
+  font-size: 17px;
+  line-height: 1;
+}
+.help-list b { color: #111; }
+/* "tik om te beginnen" als geel knopje */
+.help-card p {
+  width: max-content;
+  max-width: 100%;
+  margin: 18px auto 0;
+  padding: 6px 18px;
+  border: 3px solid #111;
+  border-radius: 99px;
+  background: #ffe100;
+  box-shadow: 0 3px 0 #111;
+  color: #111;
+  font-weight: 900;
+  font-style: italic;
+}
+.help-card small.disclaimer { margin-top: 14px; color: #6f6855; }
+.card-text { font-size: 14.5px; line-height: 1.45; }
+.card-link { display: block; margin-top: 12px; text-align: center; font-weight: 800; color: #111; }
+
+/* delen */
+.share-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.share-btn {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 3px solid #111;
+  border-radius: 14px;
+  background: var(--c, #fff);
+  box-shadow: 0 3px 0 #111;
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .12s;
+}
+.share-btn.dark, .share-btn.plain { color: #111; }
+.share-btn:hover { transform: translateY(-2px); }
+.share-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #111; }
+
+/* melding onderaan */
+#toast {
+  background: #fff8e1;
+  border-color: #fff8e1;
+  color: #111;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px #111, 0 6px 0 3px rgba(0, 0, 0, .28);
+}
+
+/* knopjes rechtsboven in het hoofdmenu, net als in de map */
+.ch-tools { position: absolute; top: 14px; right: 14px; z-index: 5; display: flex; gap: 8px; transition: opacity .4s; }
+#chooser.fadeout .ch-tools { opacity: 0; }
+.tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .55);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .25);
+  color: #4a4438;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tool:hover { transform: scale(1.08); }
+.tool:active { transform: scale(.96); }
+

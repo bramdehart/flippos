@@ -175,7 +175,13 @@ let L = null;          // layout: {mode, W, H, ax, ay, u, R, k}
 let discs = [];
 let slots = {};        // id -> {x, y, el, uid}
 let uidSeq = 1, zTop = 10;
-let soundOn = true;
+let soundOn = true;   // geldt voor de hele site, niet per map
+try { soundOn = localStorage.getItem('flippo-sound') !== '0'; } catch { /* geen opslag */ }
+function setSound(on) {
+  soundOn = on;
+  try { localStorage.setItem('flippo-sound', on ? '1' : '0'); } catch { /* geen opslag */ }
+  document.querySelectorAll('#btn-sound, #ch-sound').forEach((b) => { b.textContent = on ? '🔊' : '🔇'; });
+}
 let albumState = 'open', albumEl = null, curPage = 0;
 
 // ---------- masker met 8 gleufjes ----------
@@ -1400,11 +1406,7 @@ function packOpen(fromLeft) {
   }, 800 + PACK_N * 280 + 500);
 }
 
-$('#btn-sound').onclick = () => {
-  soundOn = !soundOn;
-  $('#btn-sound').firstChild.textContent = soundOn ? '🔊' : '🔇';
-  snd('flip');
-};
+$('#btn-sound').onclick = () => { setSound(!soundOn); snd('flip'); };
 
 // ---------- bouwwerk in 3D bekijken ----------
 // Op tafel liggen de flippo's plat; in 3D staat elke flippo haaks in de gleuf van zijn buur.
@@ -1678,8 +1680,6 @@ function load() {
   let st = null;
   try { st = JSON.parse(localStorage.getItem(STORE)); } catch { /* geen opslag */ }
   if (!st || !Array.isArray(st.discs)) return false;
-  soundOn = st.sound !== false;
-  $('#btn-sound').firstChild.textContent = soundOn ? '🔊' : '🔇';
   if (['open', 'front', 'back'].includes(st.album)) albumState = st.album;
   curPage = Math.max(0, Math.min(PAGES.length - 1, st.page | 0));
   buildAlbum();
@@ -1730,6 +1730,7 @@ $('#help').onclick = closeHelp;
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!$('#help').hidden) closeHelp();
+  else if (!$('#info').hidden || !$('#share').hidden) { $('#info').hidden = true; $('#share').hidden = true; }
   else if (v3) $('#view3d .v3-close').click();
   else closePack();
 });
@@ -1737,11 +1738,43 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('contextmenu', (e) => { if (e.target.closest('#table, #view3d')) e.preventDefault(); });
 $('#btn-help').onclick = showHelp;
 
+// ---------- hoofdmenu: over deze site, delen ----------
+const SITE = 'https://flippos.bramdehart.nl/';
+function initMenuTools() {
+  const info = $('#info'), share = $('#share');
+  // tikken naast of op het kaartje sluit het, behalve op een link of knop
+  for (const box of [info, share]) box.onclick = (e) => { if (!e.target.closest('a, button')) box.hidden = true; };
+  $('#ch-help').onclick = () => { info.hidden = false; };
+  $('#ch-sound').onclick = () => { setSound(!soundOn); snd('flip'); };
+  const text = "Flippo's verzamelen in je browser, net als in 1995!";
+  const u = encodeURIComponent(SITE), tx = encodeURIComponent(text);
+  const nets = [
+    ['WhatsApp', '#25d366', `https://wa.me/?text=${tx}%20${u}`],
+    ['Facebook', '#1877f2', `https://www.facebook.com/sharer/sharer.php?u=${u}`],
+    ['Snapchat', '#fffc00', `https://www.snapchat.com/scan?attachmentUrl=${u}`],
+    ['LinkedIn', '#0a66c2', `https://www.linkedin.com/sharing/share-offsite/?url=${u}`],
+    ['X', '#111111', `https://twitter.com/intent/tweet?text=${tx}&url=${u}`],
+  ];
+  share.querySelector('.share-list').innerHTML =
+    nets.map(([name, color, href]) => `<a class="share-btn${name === 'Snapchat' ? ' dark' : ''}" style="--c:${color}" href="${href}" target="_blank" rel="noopener">${name}</a>`).join('') +
+    '<button class="share-btn plain" data-act="copy">Link kopiëren</button>' +
+    (navigator.share ? '<button class="share-btn plain" data-act="more">Meer…</button>' : '');
+  share.querySelector('[data-act="copy"]').onclick = async (e) => {
+    try { await navigator.clipboard.writeText(SITE); e.target.textContent = 'Gekopieerd!'; }
+    catch { e.target.textContent = SITE.replace('https://', '').replace(/\/$/, ''); }   // lukt kopiëren niet: laat het adres zien
+  };
+  const more = share.querySelector('[data-act="more"]');
+  if (more) more.onclick = () => { navigator.share({ title: "Flippo's", text, url: SITE }).catch(() => {}); };
+  $('#ch-share').onclick = () => { share.querySelector('[data-act="copy"]').textContent = 'Link kopiëren'; share.hidden = false; };
+  setSound(soundOn);
+}
+
 // ---------- overzicht: kies een map ----------
 let chooserDragged = 0;
 function showChooser() {
   const box = $('#chooser');
   box.hidden = false;
+  initMenuTools();
   for (const [key, set] of Object.entries(SETS)) {
     let n = 0;
     try { n = (JSON.parse(localStorage.getItem(set.store))?.discs || []).filter((d) => d.slot != null).length; } catch { /* leeg */ }
@@ -1944,6 +1977,7 @@ if (!SET) {
   home.hidden = false;
   home.textContent = '‹';
   $('#btn-sound').hidden = false;
+  setSound(soundOn);
   $('#btn-help').hidden = false;
   $('#btn-sweep').hidden = false;
   applyLayout();
@@ -2001,7 +2035,7 @@ function startShell() {
     const f = document.createElement('iframe');
     f.className = 'frame';
     f.title = document.title;
-    f.allow = 'autoplay; fullscreen';
+    f.allow = 'autoplay; fullscreen; web-share; clipboard-write';
     f.src = u.href;
     latest = f;
     document.body.prepend(f);            // vooraan = onder het frame dat nu in beeld is
