@@ -1080,7 +1080,7 @@ body.intro #stage > .disc { transition: none; }
 }
 #btn-home i + i { transform: translate(9px, 5px) rotate(6deg); }
 /* geluid en uitleg, rechtsboven */
-#btn-sound, #btn-help {
+#btn-sound, #btn-help, #btn-share {
   top: 14px;
   width: 40px;
   height: 40px;
@@ -1093,6 +1093,8 @@ body.intro #stage > .disc { transition: none; }
 }
 #btn-sound { right: 14px; }
 #btn-help { right: 62px; }
+#btn-share { right: 110px; display: grid; place-items: center; }
+#btn-share[hidden] { display: none; }
 body.intro .obj, body.outro .obj { opacity: 0; }
 body.intro .obj { transition: none; }
 

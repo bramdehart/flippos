@@ -1563,6 +1563,19 @@ function open3d(single) {
 
 // ---------- geluid ----------
 let ac = null;
+// Een browser laat pas geluid toe na een tik of klik. Tot dan staat de geluidsbron stil, en alles wat je er intussen
+// naartoe stuurt zou pas bij de eerstvolgende tik in één keer afgaan: veel te laat. Daarom: staat hij nog stil, dan
+// vragen we hem te starten en spelen we het geluid alleen alsnog af als dat meteen lukt (binnen een kwart seconde).
+// In de schil delen alle pagina's één geluidsbron, zodat die na het wisselen van pagina niet opnieuw op een tik wacht.
+function audioOn(retry) {
+  ac = ac || (shellApi?.audio ? shellApi.audio() : new (window.AudioContext || window.webkitAudioContext)());
+  if (ac.state === 'running') return true;
+  const t0 = performance.now();
+  ac.resume().then(() => { if (performance.now() - t0 < 250) retry(); }).catch(() => {});
+  return false;
+}
+// bij de eerste aanraking alvast starten, dan is het eerste echte geluid niet te laat
+window.addEventListener('pointerdown', () => { try { audioOn(() => {}); } catch { /* geen geluid beschikbaar */ } }, { capture: true, passive: true });
 // ritselend blad: een kort stukje ruis door een filter dat omhoog veegt
 function sndPage() {
   const dur = 0.42, n = Math.floor(ac.sampleRate * dur);
@@ -1619,16 +1632,17 @@ function loadPageSound() {
   if (pageBufAsked) return;
   pageBufAsked = true;
   const get = (url) => fetch(url).then((r) => r.arrayBuffer()).then((b) => ac.decodeAudioData(b));
-  get('snd/page.mp3?v=2').then((buf) => { pageBuf = buf; }).catch(() => {});
-  get('snd/strooi.mp3').then((buf) => { strooiBuf = buf; if (strooiWant) { snd('strooi', strooiWant); strooiWant = 0; } }).catch(() => {});
+  const keep = shellApi?.bufs || {};   // in de schil blijven de opnames bewaard als je van pagina wisselt
+  pageBuf = keep.page || null; strooiBuf = keep.strooi || null;
+  if (!pageBuf) get('snd/page.mp3?v=2').then((buf) => { pageBuf = keep.page = buf; }).catch(() => {});
+  if (!strooiBuf) get('snd/strooi.mp3').then((buf) => { strooiBuf = keep.strooi = buf; if (strooiWant) { snd('strooi', strooiWant); strooiWant = 0; } }).catch(() => {});
 }
 let strooiWant = 0;
 
 function snd(type, vol = 1) {
   if (!soundOn) return;
   try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === 'suspended') ac.resume();
+    if (!audioOn(() => snd(type, vol))) return;
     loadPageSound();
     if (type === 'page') {
       if (!pageBuf) return sndPage();      // nog niet geladen: het nagemaakte geluid
@@ -1780,8 +1794,7 @@ function checkGold() {
 function sndGold() {
   if (!soundOn) return;
   try {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === 'suspended') ac.resume();
+    if (!audioOn(sndGold)) return;
     const t0 = ac.currentTime + 0.05;
     const note = (f, t, dur, vol, wave) => {
       const o = ac.createOscillator(), g = ac.createGain();
@@ -1847,11 +1860,18 @@ function showGold() {
 // ---------- hoofdmenu: over deze site, delen ----------
 const SITE = 'https://flippos.bramdehart.nl/';
 function initMenuTools() {
-  const info = $('#info'), share = $('#share');
+  const info = $('#info');
   // tikken naast of op het kaartje sluit het, behalve op een link of knop
-  for (const box of [info, share]) box.onclick = (e) => { if (!e.target.closest('a, button')) box.hidden = true; };
+  info.onclick = (e) => { if (!e.target.closest('a, button')) info.hidden = true; };
   $('#ch-help').onclick = () => { info.hidden = false; };
   $('#ch-sound').onclick = () => { setSound(!soundOn); snd('flip'); };
+  initShare($('#ch-share'));
+  setSound(soundOn);
+}
+// het deelkaartje, te openen met de knop in het hoofdmenu of in een map
+function initShare(btn) {
+  const share = $('#share');
+  share.onclick = (e) => { if (!e.target.closest('a, button')) share.hidden = true; };
   const text = "Flippo's verzamelen in je browser, net als in 1995!";
   const u = encodeURIComponent(SITE), tx = encodeURIComponent(text);
   const nets = [
@@ -1871,8 +1891,7 @@ function initMenuTools() {
   };
   const more = share.querySelector('[data-act="more"]');
   if (more) more.onclick = () => { navigator.share({ title: "Flippo's", text, url: SITE }).catch(() => {}); };
-  $('#ch-share').onclick = () => { share.querySelector('[data-act="copy"]').textContent = 'Link kopiëren'; share.hidden = false; };
-  setSound(soundOn);
+  btn.onclick = () => { share.querySelector('[data-act="copy"]').textContent = 'Link kopiëren'; share.hidden = false; };
 }
 
 // ---------- overzicht: kies een map ----------
@@ -2087,6 +2106,8 @@ if (!SET) {
   $('#btn-sound').hidden = false;
   setSound(soundOn);
   $('#btn-help').hidden = false;
+  $('#btn-share').hidden = false;
+  initShare($('#btn-share'));
   $('#btn-sweep').hidden = false;
   $('#btn-sweep').title = `Veeg alle losse ${MEER} van tafel`;
   applyLayout();
@@ -2150,7 +2171,10 @@ function startShell() {
     document.body.prepend(f);            // vooraan = onder het frame dat nu in beeld is
     setTimeout(() => show(f), 5000);     // vangnet als de pagina zich niet meldt
   };
+  let audio = null;
   window.flippoShell = {
+    bufs: {},
+    audio() { return audio || (audio = new (window.AudioContext || window.webkitAudioContext)()); },
     go(href) { history.pushState(null, '', href); open(href); },
     ready(win) { const f = [...document.querySelectorAll('iframe.frame')].find((x) => x.contentWindow === win); if (f) show(f); },
   };
