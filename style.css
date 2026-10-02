@@ -1731,3 +1731,155 @@ html, body { -webkit-touch-callout: none; }
 .tool:hover { transform: scale(1.08); }
 .tool:active { transform: scale(.96); }
 
+/* ---------- gouden flippo ---------- */
+/* los op tafel: gouden gloed en een glans die ronddraait, feller dan bij de munten */
+/* (niet op de 3D-versie: een filter maakt die plat, dan verdwijnen dikte en achterkant) */
+.disc.gold { filter: drop-shadow(0 0 calc(var(--R) * .12) rgba(255, 205, 60, .95)) drop-shadow(0 3px 3px rgba(0, 0, 0, .4)); }
+.gold .shine {
+  background: conic-gradient(from calc(var(--sh, 0) * 3.6deg),
+    transparent 0deg, rgba(255, 255, 255, .95) 16deg, transparent 40deg, transparent 80deg, rgba(255, 236, 140, .9) 104deg, transparent 130deg,
+    transparent 180deg, rgba(255, 255, 255, .95) 200deg, transparent 226deg, transparent 270deg, rgba(255, 236, 140, .9) 292deg, transparent 320deg, transparent 360deg);
+  mix-blend-mode: screen;
+  opacity: .7;
+  animation: coinspin 3.6s linear infinite;
+}
+.d3.gold .edge { background: linear-gradient(180deg, #fff3b0, #e0b02c 30%, #8a6410 55%, #d9a520 80%, #fff0a0); }
+/* 3D-weergave van de gouden flippo: gouden achtergrond met stralen en sterretjes */
+#view3d.gold { background: radial-gradient(circle at 50% 50%, #7a5600 0%, #3a2600 45%, #140c00 100%); }
+.v3-glow { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.v3-glow .g-rays { top: 50%; }
+/* de map is niet meer vol: hij krimpt weg */
+.disc.goldgone { opacity: 0; scale: .2; transition: opacity .35s, scale .35s; pointer-events: none; }
+.disc.gold .spark { color: #fff7c2; text-shadow: 0 0 6px #fff, 0 0 14px #ffd23f; }
+
+/* gewonnen: de flippo groot in beeld, met stralen, sterretjes en grote koppen */
+#goldshow {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: 1fr auto auto auto auto 1fr;
+  justify-items: center;
+  align-items: center;
+  gap: clamp(8px, 2vh, 22px);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 46%, #7a5600 0%, #3a2600 45%, #140c00 100%);
+  opacity: 0;
+  transition: opacity .45s;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#goldshow.show { opacity: 1; }
+.g-rays {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 240vmax;
+  height: 240vmax;
+  margin: -120vmax;
+  background: repeating-conic-gradient(rgba(255, 221, 80, .5) 0deg 7deg, transparent 7deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, .55) 18%, transparent 46%);
+  mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, .55) 18%, transparent 46%);
+  animation: goldrays 14s linear infinite;
+}
+.g-rays.two { background: repeating-conic-gradient(rgba(255, 255, 255, .28) 0deg 3deg, transparent 3deg 14deg); animation-duration: 9s; animation-direction: reverse; }
+@keyframes goldrays { to { transform: rotate(360deg); } }
+.g-head, .g-sub, .g-go, .g-coin { position: relative; z-index: 1; }
+.g-head {
+  grid-row: 2;
+  font-size: clamp(46px, 14vw, 120px);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1;
+  color: #ffe100;
+  -webkit-text-stroke: clamp(7px, 1.4vw, 14px) #111;
+  paint-order: stroke fill;
+  text-shadow: 0 8px 0 rgba(0, 0, 0, .35), 0 0 40px rgba(255, 220, 80, .8);
+  transform: rotate(-4deg);
+  animation: goldpop .7s cubic-bezier(.3, 1.7, .5, 1) .25s backwards, goldwob 1.6s ease-in-out 1s infinite;
+}
+.g-sub {
+  grid-row: 4;
+  font-size: clamp(28px, 8.5vw, 70px);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1;
+  text-align: center;
+  color: #fff;
+  -webkit-text-stroke: clamp(5px, 1vw, 10px) #111;
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 rgba(0, 0, 0, .35);
+  transform: rotate(2deg);
+  animation: goldpop .7s cubic-bezier(.3, 1.7, .5, 1) 1s backwards;
+}
+.g-go {
+  grid-row: 5;
+  padding: 7px 20px;
+  border: 3px solid #111;
+  border-radius: 99px;
+  background: #ffe100;
+  box-shadow: 0 3px 0 #111;
+  color: #111;
+  font-weight: 900;
+  font-style: italic;
+  animation: goldpop .5s ease-out 1.6s backwards;
+}
+.g-coin {
+  grid-row: 3;
+  width: min(64vw, 44vh);
+  aspect-ratio: 1;
+  perspective: 1400px;
+  filter: drop-shadow(0 0 30px rgba(255, 215, 70, .95)) drop-shadow(0 0 80px rgba(255, 190, 40, .7));
+  animation: goldin 1.1s cubic-bezier(.2, 1.3, .4, 1) backwards;
+}
+.g-coin { --t: calc(min(64vw, 44vh) * .06); }   /* dikte van de flippo */
+.g-flip { position: absolute; inset: 0; transform-style: preserve-3d; animation: goldspin 3.4s linear 1.1s infinite; }
+.g-face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.g-face img { display: block; width: 100%; height: 100%; }
+.g-front { transform: translateZ(calc(var(--t) / 2)); }
+.g-back { transform: rotateY(180deg) translateZ(calc(var(--t) / 2)); }
+/* de rand: laagjes goud tussen de twee kanten */
+.g-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff3b0, #e0b02c 30%, #8a6410 55%, #d9a520 80%, #fff0a0);
+  transform: translateZ(calc(var(--t) * var(--f)));
+}
+/* lichtstreep die over elke kant veegt en dus met de flippo meedraait */
+.g-glint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 36%, rgba(255, 255, 255, .95) 50%, transparent 64%) 0 0 / 300% 100%;
+  mix-blend-mode: screen;
+  animation: sweep 1.5s linear infinite;
+}
+@keyframes goldin { from { transform: scale(0) rotate(-720deg); opacity: 0; } }
+@keyframes goldspin { to { transform: rotateY(360deg); } }
+@keyframes goldpop { from { opacity: 0; transform: scale(.2) rotate(-14deg); } }
+@keyframes goldwob { 50% { transform: rotate(-1deg) scale(1.06); } }
+.g-spark { position: absolute; color: #fff7c2; text-shadow: 0 0 8px #fff, 0 0 18px #ffd23f; animation: spark 1.6s ease-in-out infinite; pointer-events: none; }
+
+/* overzicht: bij een volle flippo-map ligt de gouden flippo stralend voor de kaft */
+.ch-gold { position: absolute; right: -9%; bottom: 4%; width: 46%; aspect-ratio: 1; z-index: 2; pointer-events: none; transition: opacity .4s; }
+.ch-gold i {
+  position: absolute;
+  inset: -45%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 225, 60, .95) 0deg 8deg, transparent 8deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 68%);
+  mask: radial-gradient(circle, #000 30%, transparent 68%);
+  animation: goldrays 10s linear infinite;
+}
+.ch-card .ch-book .ch-gold img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 70, .95)) drop-shadow(0 4px 4px rgba(0, 0, 0, .45));
+  animation: goldwob 2.4s ease-in-out infinite;
+}
+#chooser.fadeout .ch-gold { opacity: 0; }
+

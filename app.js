@@ -51,6 +51,8 @@ const revealed = new Promise((done) => {
 });
 const FLIPPO = !!SET && SET.kind === 'flippo';       // ronde flippo's zonder gleufjes
 const POKE = !!SET && SET.kind === 'pokemon';        // metalen munten: groter, glimmende achterkant
+// hoe de schijfjes in deze map heten, voor alle teksten
+const EEN = POKE ? 'een munt' : FLIPPO ? 'een flippo' : 'een Diskey', MEER = POKE ? 'munten' : FLIPPO ? "flippo's" : 'Diskeyz';
 const FLAT = FLIPPO || POKE;                         // het plaatje heeft zelf al de vorm van de schijf
 const POKEMON = ['Charmander', 'Charizard', 'Blastoise', 'Butterfree', 'Pikachu', 'Meowth', 'Psyduck', 'Primeape', 'Arcanine', 'Poliwrath', 'Gengar', 'Mew',
   'Chikorita', 'Cyndaquil', 'Totodile', 'Sentret', 'Hoothoot', 'Noctowl', 'Ledyba', 'Spinarak', 'Lanturn', 'Pichu', 'Togepi', 'Xatu',
@@ -59,8 +61,9 @@ const POKEMON = ['Charmander', 'Charizard', 'Blastoise', 'Butterfree', 'Pikachu'
 // per serie een eigen kleur (achterkant en rand van het vakje)
 const FCOLORS = ['#d7263d', '#f08a24', '#7b2cbf', '#1b9aaa', '#2a9d4b', '#e63987', '#1f6fd0', '#f0a202',
   '#8f2d56', '#3a7d44', '#8f2d56', '#c1121f', '#5a5a9c', '#0b7a75', '#4a2c6f'];
+const GOLD = 'gold';   // de gouden flippo: geen nummer en geen vakje, je krijgt hem als een flippo-map vol is
 const SHINY = POKE ? {} : FLIPPO
-  ? Object.fromEntries(Array.from({ length: 20 }, (_, i) => [121 + i, 'holo']))   // Techno-flippo's glimmen
+  ? { ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => [121 + i, 'holo'])), [GOLD]: 'gold' }   // Techno-flippo's glimmen
   : { 2: 'foil', 17: 'laser', 21: 'glitter', 25: 'holo' };
 
 // vakjes op een pagina, in map-eenheden (pagina = 880 x 1300)
@@ -93,16 +96,16 @@ const MISSING = new Set(FLIPPO ? FLIPPOS.missing : []);          // nummers waar
 const IDS = SET ? Array.from({ length: SET.to - SET.from + 1 }, (_, i) => SET.from + i).filter((id) => !MISSING.has(id)) : [];
 const IDSET = new Set(IDS);
 const seriesOf = (id) => FLIPPOS.series.findIndex((x) => id >= x.from && id <= x.to);
-const label = (id) => (FLAT ? String(id) : pad2(id));
-const nameOf = (id) => (POKE ? POKEMON[id - 1] : FLIPPO ? FLIPPOS.names[id] || `Flippo ${id}` : DATA[id - 1][0]);
-const imgOf = (id) => (POKE ? `${SET.dir}/${pad2(id)}.webp` : FLIPPO ? `${SET.dir}/${pad3(id)}.webp` : `${SET.dir}/${pad2(id)}.jpg`);
+const label = (id) => (id === GOLD ? '★' : FLAT ? String(id) : pad2(id));
+const nameOf = (id) => (id === GOLD ? 'Gouden flippo' : POKE ? POKEMON[id - 1] : FLIPPO ? FLIPPOS.names[id] || `Flippo ${id}` : DATA[id - 1][0]);
+const imgOf = (id) => (id === GOLD ? 'img/gold/front.webp' : POKE ? `${SET.dir}/${pad2(id)}.webp` : FLIPPO ? `${SET.dir}/${pad3(id)}.webp` : `${SET.dir}/${pad2(id)}.jpg`);
 // inkepingen: Diskeyz hebben er altijd acht; bij de flippo's alleen sommige series (Techno, Strip, Flying).
 // slitBase = hoeveel graden de acht inkepingen verdraaid staan op het plaatje (undefined = geen inkepingen)
 const slitBase = (id) => (POKE ? undefined : FLIPPO ? FLIPPOS.slits[id] : 0);
 const hasSlits = (id) => slitBase(id) != null;
 // afstand tussen twee vastgeklikte flippo's, in stralen (flippo's hebben ondiepere inkepingen)
 const LINKD = FLIPPO ? 1.7 : LINK;
-const colorOf = (id) => (POKE ? ['#e8212b', '#1b63c9', '#eeb02c', '#2a9d4b'][Math.floor((id - 1) / 12)] : FLIPPO ? FCOLORS[seriesOf(id)] : COLORS[Math.floor((id - 1) / 5)]);
+const colorOf = (id) => (id === GOLD ? '#d9a520' : POKE ? ['#e8212b', '#1b63c9', '#eeb02c', '#2a9d4b'][Math.floor((id - 1) / 12)] : FLIPPO ? FCOLORS[seriesOf(id)] : COLORS[Math.floor((id - 1) / 5)]);
 
 // naam zoals hij op de achterkant staat: bij World Flippo's alleen het karakter, niet het land erachter
 function backNameOf(id, n) {
@@ -128,6 +131,7 @@ function backText(id, bt) {
 
 function backHtml(id) {
   if (POKE) return `<div class="face back imgback coinback"><img src="${SET.dir}/back.webp" alt="" draggable="false"><div class="cshine"></div><div class="cshine two"></div></div>`;
+  if (id === GOLD) return '<div class="face back imgback"><img src="img/gold/back.webp" alt="" draggable="false"></div>';
   if (!FLIPPO) {
     const [, food, emo] = DATA[id - 1];
     return `<div class="face back"><div class="emo">${emo}</div><div class="food">${food}</div><div class="no">${pad2(id)}</div></div>`;
@@ -649,7 +653,7 @@ function render(d) {
   s.setProperty('--x', d.x + 'px');
   s.setProperty('--y', d.y + 'px');
   s.setProperty('--rot', d.rot + 'deg');
-  s.zIndex = d.slot != null && !d.sliding ? 2 : d.z;
+  s.zIndex = d.tucked ? 0 : d.slot != null && !d.sliding ? 2 : d.z;   // weggestopt = half onder de map
   if (SHINY[d.id] || POKE) s.setProperty('--sh', mod(d.x * 0.28 + d.y * 0.17 + d.rot * 0.6 + pointerShift, 100).toFixed(1));
   d.el.classList.toggle('inslot', d.slot != null);
   d.el.classList.toggle('flipped', d.flipped);
@@ -945,8 +949,9 @@ function updateCount() {
   const n = discs.filter((d) => d.slot != null).length, total = IDS.length;
   const bc = document.querySelector('.bc-count');
   if (bc) bc.textContent = `${n} / ${total}`;
-  if (n === total && updateCount.last != null && updateCount.last !== total) toast('🎉 De map is compleet!');
+  if (n === total && updateCount.last != null && updateCount.last !== total && !FLIPPO) toast('🎉 De map is compleet!');
   updateCount.last = n;
+  checkGold();
 }
 
 function pop(d) {
@@ -1049,10 +1054,11 @@ function onMove(e) {
     drag.moved = true;
     clearTimeout(drag.hold);
     leaveSlot(d);
+    d.tucked = false;
     toFront(group);
     if (e.pointerType === 'touch') for (const o of drag.offs) o.dy -= Math.min(L.R * 0.9, 40 / K());
     group.forEach((g) => { g.el.classList.remove('anim'); g.el.classList.add('drag'); });
-    if (albumState === 'open' && group.length === 1 && slots[d.id].uid == null) {
+    if (albumState === 'open' && group.length === 1 && slots[d.id] && slots[d.id].uid == null) {
       setPage(slots[d.id].page);   // blader vanzelf naar de pagina waar hij hoort
       focusPage(slots[d.id].page); // en schuif die bladzijde in beeld
       slots[d.id].el?.classList.add('target');
@@ -1086,10 +1092,10 @@ function onUp(e) {
   }
 
   group.forEach((g) => g.el.classList.remove('drag'));
-  slots[d.id].el?.classList.remove('target');
+  slots[d.id]?.el?.classList.remove('target');
 
   let done = false;
-  if (group.length === 1 && albumState === 'open') {
+  if (group.length === 1 && albumState === 'open' && slots[d.id]) {
     const s = slots[d.id];
     // op een klein scherm hoef je niet te mikken: loslaten ergens op de map is genoeg
     const onAlbum = L.wide && d.x > AX() && d.x < AX() + L.aw && d.y > L.ay && d.y < L.ay + L.ah;
@@ -1147,12 +1153,12 @@ window.addEventListener('pointermove', (e) => {
 // Veegt alle losse flippo's (ook bouwwerken) van tafel. Wat in de map zit blijft.
 let sweepArmed = -1e9;
 $('#btn-sweep').onclick = () => {
-  const loose = discs.filter((d) => d.slot == null);
+  const loose = discs.filter((d) => d.slot == null && d.id !== GOLD);   // de gouden flippo veeg je niet weg
   if (!loose.length) return toast('De tafel is al leeg');
   const now = performance.now();
   if (now - sweepArmed > 3500) {          // eerst vragen: weg is weg
     sweepArmed = now;
-    return toast(`Tik nog een keer om ${loose.length} losse ${POKE ? 'munten' : "flippo's"} van tafel te vegen`);
+    return toast(`Tik nog een keer om ${loose.length} losse ${MEER} van tafel te vegen`);
   }
   sweepArmed = -1e9;
   for (const d of loose) {
@@ -1254,7 +1260,7 @@ function closePack() {
 
 // ligt de tafel vol, dan verdwijnen de oudste losse (liefst dubbele) flippo's
 function makeRoom(n) {
-  const loose = discs.filter((d) => d.slot == null);
+  const loose = discs.filter((d) => d.slot == null && d.id !== GOLD);
   const over = loose.length + n - (L.wide ? 24 : MAX_DISCS);   // op een klein scherm past er minder op tafel
   if (over <= 0) return;
   const count = (id) => discs.filter((d) => d.id === id).length;
@@ -1453,7 +1459,7 @@ function open3d(single) {
   } else {
     let root = byUid(lastBuilt);
     if (!root || !root.links.length || root.slot != null) root = discs.find((d) => d.links.length);
-    if (!root) return toast('Zet eerst een paar flippo\'s in elkaar');
+    if (!root) return toast(`Zet eerst een paar ${MEER} in elkaar`);
     ({ parts, size } = layout3d(root));
   }
   const box = $('#view3d'), world = box.querySelector('.world');
@@ -1466,7 +1472,7 @@ function open3d(single) {
     el.style.setProperty('--c', colorOf(o.d.id));
     el.innerHTML = o.d.el.querySelector('.flip').innerHTML;
     // dikte: een stapeltje laagjes tussen voor- en achterkant vormt de rand
-    const T = Math.max(4, Math.round(R * 0.07));
+    const T = Math.max(4, Math.round(R * (o.d.id === GOLD ? 0.12 : 0.07)));   // de gouden flippo is van metaal en dikker
     el.style.setProperty('--t', T + 'px');
     const m = FLAT ? `-webkit-mask:url(${imgOf(o.d.id)}) center/100% 100%;mask:url(${imgOf(o.d.id)}) center/100% 100%;` : '';
     let edge = '';
@@ -1477,10 +1483,22 @@ function open3d(single) {
     world.appendChild(el);
   }
   v3 = { rx: single ? -8 : -22, ry: single ? 0 : 30, zoom: 1, spin: true, ptrs: new Map(), world };
+  // de gouden flippo krijgt hier dezelfde gouden achtergrond met stralen en sterretjes als toen je hem won
+  const golden = !!single && single.id === GOLD;
+  box.classList.toggle('gold', golden);
+  box.querySelector('.v3-glow')?.remove();
+  if (golden) {
+    let sparks = '';
+    for (let i = 0; i < 22; i++) {
+      sparks += `<span class="g-spark" style="left:${(4 + Math.random() * 92).toFixed(1)}%;top:${(4 + Math.random() * 92).toFixed(1)}%;` +
+        `animation-delay:${(-Math.random() * 2).toFixed(2)}s;font-size:${Math.round(14 + Math.random() * 30)}px">✦</span>`;
+    }
+    box.insertAdjacentHTML('afterbegin', `<div class="v3-glow"><div class="g-rays"></div><div class="g-rays two"></div>${sparks}</div>`);
+  }
   box.classList.add('show');
   box.querySelector('.v3-title').textContent = single
     ? `${label(single.id)} · ${nameOf(single.id)}`
-    : `Bouwwerk van ${parts.length} flippo's`;
+    : `Bouwwerk van ${parts.length} ${MEER}`;
   cancelAnimationFrame(open3d.raf);
   let last = performance.now();
   const tick = (now = performance.now()) => {
@@ -1671,7 +1689,7 @@ function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       mode: L.mode, W: L.W, H: L.H, R: L.R, sound: soundOn, album: albumState, page: curPage,
-      discs: discs.map(({ uid, id, x, y, rot, flipped, slot, links, z }) => ({ uid, id, x, y, rot, flipped, slot, links, z })),
+      discs: discs.map(({ uid, id, x, y, rot, flipped, slot, links, z, tucked }) => ({ uid, id, x, y, rot, flipped, slot, links, z, tucked: tucked || undefined })),
     }));
   } catch { /* opslag niet beschikbaar */ }
 }
@@ -1684,7 +1702,7 @@ function load() {
   curPage = Math.max(0, Math.min(PAGES.length - 1, st.page | 0));
   buildAlbum();
   for (const p of st.discs) {
-    if (!IDSET.has(p.id)) continue;
+    if (!IDSET.has(p.id) && !(FLIPPO && p.id === GOLD)) continue;
     const d = makeDisc(p.id, p);
     zTop = Math.max(zTop, d.z);
     if (d.slot != null) slots[d.slot].uid = d.uid;
@@ -1699,18 +1717,19 @@ function load() {
 
 // ---------- uitleg ----------
 function showHelp() {
-  const een = POKE ? 'een munt' : 'een flippo', meer = POKE ? 'munten' : 'flippo\'s';   // hoe de schijfjes in deze map heten
+  const een = EEN, meer = MEER;
   const rows = [
     ['👆', 'Sleep', L.wide ? `${een} naar de map; hij schuift vanzelf in zijn eigen vakje` : `${een} naar zijn vakje in de map`],
     ['🔄', 'Tik', `op ${een} om hem om te draaien`],
-    ['🔍', 'Houd vast', POKE ? 'om een munt groot en in 3D te bekijken' : 'om een flippo of bouwwerk groot en in 3D te bekijken'],
+    ['🔍', 'Houd vast', POKE ? 'om een munt groot en in 3D te bekijken' : `om ${een} of bouwwerk groot en in 3D te bekijken`],
     !POKE && ['🧩', 'Sleep tegen elkaar', FLIPPO ? 'om flippo\'s met inkepingen vast te klikken' : 'om twee Diskeyz vast te klikken'],
-    !POKE && ['✂️', 'Dubbeltik', 'om een flippo weer los te maken'],
+    !POKE && ['✂️', 'Dubbeltik', `om ${een} weer los te maken`],
     L.wide
       ? ['📖', 'Sleep de map opzij', 'om de andere bladzijde te zien; sleep verder om om te slaan of de map dicht te doen']
       : ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
     [FLIPPO ? '🍟' : '🎁', FLIPPO ? 'Tik op de zak chips' : 'Tik op het zakje', `linksonder voor nieuwe ${meer}`],
     ['‹', 'Tik op het pijltje', 'linksboven om een andere map te pakken'],
+    FLIPPO && ['🏆', 'Spaar de map helemaal vol', 'en kijk wat er dan tevoorschijn komt…'],
     ['🧹', 'Tik op de bezem', `rechtsonder om alle losse ${meer} van tafel te vegen`],
     ['🤏', 'Knijp', 'met twee vingers (of ctrl + scrollen) om in te zoomen'],
   ];
@@ -1737,6 +1756,93 @@ window.addEventListener('keydown', (e) => {
 // geen contextmenu bij lang indrukken (dat is 'groot bekijken')
 window.addEventListener('contextmenu', (e) => { if (e.target.closest('#table, #view3d')) e.preventDefault(); });
 $('#btn-help').onclick = showHelp;
+
+// ---------- gouden flippo ----------
+// Is een flippo-map helemaal vol, dan win je de gouden flippo: eerst groot in beeld, daarna ligt hij los op tafel.
+// Haal je er daarna weer een flippo uit, dan is de map niet meer vol en verdwijnt de gouden flippo; maak je de map
+// opnieuw vol, dan win je hem opnieuw.
+const mapFull = () => discs.filter((d) => d.slot != null).length >= IDS.length;
+function checkGold() {
+  if (!FLIPPO) return;
+  const g = discs.find((d) => d.id === GOLD);
+  if (!mapFull()) {
+    if (!g) return;
+    discs.splice(discs.indexOf(g), 1);
+    g.el.classList.add('goldgone');
+    setTimeout(() => g.el.remove(), 400);
+    return;
+  }
+  if (g || checkGold.busy) return;
+  checkGold.busy = true;
+  setTimeout(() => { if (mapFull()) showGold(); else checkGold.busy = false; }, 1300);
+}
+
+function sndGold() {
+  if (!soundOn) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const t0 = ac.currentTime + 0.05;
+    const note = (f, t, dur, vol, wave) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = wave; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(ac.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+    };
+    // fanfare: omhoog lopende drieklank, dan een lang slotakkoord
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { note(f, t0 + i * 0.13, 0.22, 0.2, 'square'); note(f / 2, t0 + i * 0.13, 0.22, 0.16, 'triangle'); });
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f) => note(f, t0 + 0.56, 1.5, 0.13, 'triangle'));
+    // glinstering: losse hoge tinkeltjes
+    for (let i = 0; i < 22; i++) note(2200 + Math.random() * 3600, t0 + 0.5 + Math.random() * 2.2, 0.18, 0.05, 'sine');
+  } catch { /* geen geluid beschikbaar */ }
+  setTimeout(() => snd('strooi', 0.7), 650);
+}
+
+function showGold() {
+  const box = document.createElement('div');
+  box.id = 'goldshow';
+  let sparks = '';
+  for (let i = 0; i < 28; i++) {
+    sparks += `<span class="g-spark" style="left:${(4 + Math.random() * 92).toFixed(1)}%;top:${(4 + Math.random() * 92).toFixed(1)}%;` +
+      `animation-delay:${(-Math.random() * 2).toFixed(2)}s;font-size:${Math.round(14 + Math.random() * 34)}px">✦</span>`;
+  }
+  box.innerHTML = `<div class="g-rays"></div><div class="g-rays two"></div>${sparks}` +
+    '<div class="g-head">Gewonnen!</div>' +
+    // de flippo heeft dikte (een stapeltje randjes tussen voor- en achterkant) en de glans zit óp de twee kanten, zodat die meedraait
+    '<div class="g-coin"><div class="g-flip">' +
+    Array.from({ length: 15 }, (_, i) => `<i class="g-edge" style="--f:${(i / 14 - 0.5).toFixed(3)}"></i>`).join('') +
+    '<div class="g-face g-front"><img src="img/gold/front.webp" alt="Gouden flippo"><i class="g-glint"></i></div>' +
+    '<div class="g-face g-back"><img src="img/gold/back.webp" alt=""><i class="g-glint"></i></div>' +
+    '</div></div>' +
+    '<div class="g-sub">De gouden flippo</div>' +
+    '<div class="g-go">Tik om hem te pakken</div>';
+  document.body.appendChild(box);
+  void box.offsetWidth;
+  box.classList.add('show');
+  sndGold();
+  const take = () => {
+    box.onclick = null;
+    // de flippo komt op tafel terecht op de plek waar hij in beeld stond en schuift dan naar zijn plek
+    const c = box.querySelector('.g-coin').getBoundingClientRect(), p = stagePoint({ clientX: c.left + c.width / 2, clientY: c.top + c.height / 2 });
+    const d = makeDisc(GOLD, { x: p.x, y: p.y, rot: 0 });
+    box.classList.remove('show');
+    setTimeout(() => box.remove(), 500);
+    // klein scherm: geen ruimte op tafel, dus hij steekt half onder de map vandaan. Anders ligt hij gewoon op tafel.
+    const to = L.wide ? { x: L.W / 2, y: L.ay + L.ah - L.R * 0.1 } : tableSpot();
+    setTimeout(() => {
+      d.x = to.x; d.y = to.y; d.rot = -8;
+      animate([d], 700);
+      render(d);
+      snd('put');
+      setTimeout(() => { if (L.wide && d.slot == null && !(drag && drag.d === d)) { d.tucked = true; render(d); } checkGold.busy = false; save(); }, 720);
+    }, 60);
+    save();
+  };
+  setTimeout(() => { box.onclick = take; }, 1500);   // niet per ongeluk meteen wegtikken
+}
 
 // ---------- hoofdmenu: over deze site, delen ----------
 const SITE = 'https://flippos.bramdehart.nl/';
@@ -1782,7 +1888,9 @@ function showChooser() {
     const total = set.to - set.from + 1 - gaps;
     const card = document.createElement('button');
     card.className = 'ch-card';
-    card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt="" style="aspect-ratio:880/${set.pageH || 1300}"></div><b>${set.title}</b>` +
+    // een volle flippo-map: de gouden flippo ligt er stralend voor
+    const gold = set.kind === 'flippo' && n >= total ? '<div class="ch-gold"><i></i><img src="img/gold/front.webp" alt="Gouden flippo"></div>' : '';
+    card.innerHTML = `<div class="ch-book ${set.kind}"><img src="${set.cover}" alt="" style="aspect-ratio:880/${set.pageH || 1300}">${gold}</div><b>${set.title}</b>` +
       `<span>${set.year} · ${set.kind === 'flippo' ? `nr. ${set.from}–${set.to}` : set.kind === 'pokemon' ? '48 munten' : '30 Diskeyz'}</span>` +
       `<u><i style="width:${Math.round(n / total * 100)}%"></i></u>` +
       `<em>${n} / ${total} in de map</em>`;
@@ -1980,6 +2088,7 @@ if (!SET) {
   setSound(soundOn);
   $('#btn-help').hidden = false;
   $('#btn-sweep').hidden = false;
+  $('#btn-sweep').title = `Veeg alle losse ${MEER} van tafel`;
   applyLayout();
   if (!load()) {
     // nieuw spel: lege tafel, je begint met een zak chips of een zakje
