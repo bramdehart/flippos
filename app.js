@@ -1293,7 +1293,7 @@ function spillChips(x, y, w) {
   for (let i = 0; i < 26; i++) {
     const c = document.createElement('div');
     c.className = 'chip';
-    const size = 46 + Math.random() * 34;
+    const size = L.R * (1 + Math.random() * 0.74);   // half tot bijna even groot als een flippo, op elk scherm
     c.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;` +
       `background-image:url(${SET.dir}/chip-${1 + (i % 5)}.webp)`;
     stage.appendChild(c);
