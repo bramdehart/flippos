@@ -961,14 +961,16 @@ function pop(d) {
 }
 
 // ---------- in elkaar klikken ----------
-const slitUsed = (d, k) => d.links.some((l) => l.slit === k);
+// een flippo zonder inkepingen kan overal aan zijn rand vastzitten: zijn "gleuf" is dan een gebroken getal
+const slitUsed = (d, k) => d.links.some((l) => Math.abs(mod(l.slit - k + 4, 8) - 4) < 0.5);
 
 function tryConnect(group) {
   const R = L.R, target = LINKD * R, inGroup = new Set(group);
   const cands = [];
   for (const a of group) {
     for (const o of discs) {
-      if (inGroup.has(o) || o.slot != null || !hasSlits(a.id) || !hasSlits(o.id)) continue;
+      // minstens één van de twee moet inkepingen hebben; twee gladde flippo's klikken niet (en de gouden flippo nooit)
+      if (inGroup.has(o) || o.slot != null || (!hasSlits(a.id) && !hasSlits(o.id)) || a.id === GOLD || o.id === GOLD) continue;
       const dist = Math.hypot(a.x - o.x, a.y - o.y);
       if (dist < R * 0.9 || dist > R * 2.2) continue;
       cands.push({ a, o, score: Math.abs(dist - target) });
@@ -979,12 +981,14 @@ function tryConnect(group) {
   for (const { a, o } of cands) {
     const ang = Math.atan2(a.y - o.y, a.x - o.x) * 180 / Math.PI;
     // gleuf k van o wijst naar o.rot + basis + k*45 - 90
-    const bo = slitBase(o.id), ba = slitBase(a.id);
-    const k = mod(Math.round((ang - o.rot - bo + 90) / 45), 8);
+    const bo = slitBase(o.id) ?? 0, ba = slitBase(a.id) ?? 0;
+    // heeft o inkepingen, dan de dichtstbijzijnde; anders precies de plek waar a hem raakt
+    const ko = (ang - o.rot - bo + 90) / 45;
+    const k = mod(hasSlits(o.id) ? Math.round(ko) : ko, 8);
     if (slitUsed(o, k)) continue;
     const slitAng = o.rot + bo + k * 45 - 90;
     const want = slitAng + 270 - a.rot - ba;       // a moet een gleuf terug laten wijzen
-    const j = Math.round(want / 45), delta = want - j * 45, jm = mod(j, 8);
+    const j = hasSlits(a.id) ? Math.round(want / 45) : want / 45, delta = want - j * 45, jm = mod(j, 8);   // een gladde flippo hoeft niet te draaien
     if (slitUsed(a, jm)) continue;
 
     const tx = o.x + Math.cos(rad(slitAng)) * target, ty = o.y + Math.sin(rad(slitAng)) * target;
@@ -1419,7 +1423,7 @@ $('#btn-sound').onclick = () => { setSound(!soundOn); snd('flip'); };
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const add = (a, b, f = 1) => [a[0] + b[0] * f, a[1] + b[1] * f, a[2] + b[2] * f];
 const mix = (a, fa, b, fb) => [a[0] * fa + b[0] * fb, a[1] * fa + b[1] * fb, a[2] * fa + b[2] * fb];
-const slitDir = (d, k) => { const a = rad(slitBase(d.id) + k * 45 - 90); return [Math.cos(a), Math.sin(a)]; };
+const slitDir = (d, k) => { const a = rad((slitBase(d.id) ?? 0) + k * 45 - 90); return [Math.cos(a), Math.sin(a)]; };
 
 function layout3d(root) {
   const r0 = rad(root.rot);
@@ -1736,7 +1740,7 @@ function showHelp() {
     ['👆', 'Sleep', L.wide ? `${een} naar de map; hij schuift vanzelf in zijn eigen vakje` : `${een} naar zijn vakje in de map`],
     ['🔄', 'Tik', `op ${een} om hem om te draaien`],
     ['🔍', 'Houd vast', POKE ? 'om een munt groot en in 3D te bekijken' : `om ${een} of bouwwerk groot en in 3D te bekijken`],
-    !POKE && ['🧩', 'Sleep tegen elkaar', FLIPPO ? 'om flippo\'s met inkepingen vast te klikken' : 'om twee Diskeyz vast te klikken'],
+    !POKE && ['🧩', 'Sleep tegen elkaar', FLIPPO ? 'om een flippo met inkepingen aan een andere vast te klikken' : 'om twee Diskeyz vast te klikken'],
     !POKE && ['✂️', 'Dubbeltik', `om ${een} weer los te maken`],
     L.wide
       ? ['📖', 'Sleep de map opzij', 'om de andere bladzijde te zien; sleep verder om om te slaan of de map dicht te doen']
