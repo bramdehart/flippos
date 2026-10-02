@@ -1677,6 +1677,8 @@ html, body { -webkit-touch-callout: none; }
   font-style: italic;
 }
 .help-card small.disclaimer { margin-top: 14px; color: #6f6855; }
+/* de reclame in het kaartje "Over deze site" */
+.card-video { display: block; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 14px; border: 3px solid #111; border-radius: 12px; background: #111; cursor: default; }
 .card-text { font-size: 14.5px; line-height: 1.45; }
 .card-link { display: block; margin-top: 12px; text-align: center; font-weight: 800; color: #111; }
 

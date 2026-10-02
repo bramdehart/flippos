@@ -1767,7 +1767,7 @@ $('#help').onclick = closeHelp;
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!$('#help').hidden) closeHelp();
-  else if (!$('#info').hidden || !$('#share').hidden) { $('#info').hidden = true; $('#share').hidden = true; }
+  else if (!$('#info').hidden || !$('#share').hidden) { $('#info video')?.pause(); $('#info').hidden = true; $('#share').hidden = true; }
   else if (v3) $('#view3d .v3-close').click();
   else closePack();
 });
@@ -1866,7 +1866,9 @@ const SITE = 'https://flippos.bramdehart.nl/';
 function initMenuTools() {
   const info = $('#info');
   // tikken naast of op het kaartje sluit het, behalve op een link of knop
-  info.onclick = (e) => { if (!e.target.closest('a, button')) info.hidden = true; };
+  // de reclame in het kaartje stopt als je het sluit
+  const film = info.querySelector('video');
+  info.onclick = (e) => { if (e.target.closest('a, button, video')) return; film.pause(); info.hidden = true; };
   $('#ch-help').onclick = () => { info.hidden = false; };
   $('#ch-sound').onclick = () => { setSound(!soundOn); snd('flip'); };
   initShare($('#ch-share'));
