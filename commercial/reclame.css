@@ -92,14 +92,31 @@ html, body {
 
 /* dichte map met rug */
 .book {
+  /* net als in het spel: een rechte rug links, daar half overheen de kaft met ronde hoeken en een randje (--w = breedte in px) */
+  --ring: #c9b76a;
+  --spine: linear-gradient(90deg, #a89650, #e6d68c 30%, #f4e9ae 50%, #e6d68c 70%, #a89650);
   position: absolute;
-  padding-left: 5%;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #a89650, #e6d68c 30%, #f4e9ae 50%, #e6d68c 70%, #a89650) 0 0 / 5.5% 100% no-repeat, #c9b76a;
-  box-shadow: 0 0 0 5px #c9b76a, 0 22px 34px rgba(0, 0, 0, .45);
+  padding-left: calc(var(--w) * .04348);
 }
-.book.dk { background: linear-gradient(90deg, #1f5ea8, #5aa3e6 30%, #7fc0f5 50%, #5aa3e6 70%, #1f5ea8) 0 0 / 5.5% 100% no-repeat, #2f79c9; box-shadow: 0 0 0 5px #2f79c9, 0 22px 34px rgba(0, 0, 0, .45); }
-.book img { display: block; width: 100%; height: 100%; border-radius: 0 9px 9px 0; }
+.book::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--w) * .04348);
+  background: var(--spine);
+  box-shadow: 0 22px 34px rgba(0, 0, 0, .45);
+}
+.book.dk { --ring: #2f79c9; --spine: linear-gradient(90deg, #1f5ea8, #5aa3e6 30%, #7fc0f5 50%, #5aa3e6 70%, #1f5ea8); }
+.book img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--w) * .01522);
+  box-shadow: 0 0 0 calc(var(--w) * .00652) var(--ring), 0 22px 34px rgba(0, 0, 0, .45);
+}
 
 /* opengeslagen map */
 .spread { position: absolute; transform-style: preserve-3d; }
@@ -245,4 +262,15 @@ html, body {
 #start.again .start-logo, #start.again p { display: none; }
 #start.again #play { font-size: 18px; padding: 8px 22px; border-width: 4px; }
 
-.book.pk { background: linear-gradient(90deg, #7d0c14, #e8212b 30%, #ff6a6f 50%, #e8212b 70%, #7d0c14) 0 0 / 5.5% 100% no-repeat, #b3121c; box-shadow: 0 0 0 5px #b3121c, 0 22px 34px rgba(0, 0, 0, .45); }
+.book.pk { --ring: #b3121c; --spine: linear-gradient(90deg, #7d0c14, #e8212b 30%, #ff6a6f 50%, #e8212b 70%, #7d0c14); }
+
+/* zakje met munten of Diskeyz: het plaatje staat er twee keer in, als zak en als afscheurstrook */
+.pack { position: absolute; filter: drop-shadow(0 20px 18px rgba(0, 0, 0, .5)); }
+.pack .pp { position: absolute; inset: 0; background: center / 100% 100% no-repeat; }
+
+/* gouden flippo: donkergouden achtergrond, sterretjes en een gouden rand */
+.goldbg { position: absolute; inset: -40px; background: radial-gradient(circle at 50% 52%, #8a6200 0%, #3a2600 48%, #140c00 100%); }
+.spark { position: absolute; color: #fff7c2; text-shadow: 0 0 10px #fff, 0 0 22px #ffd23f; pointer-events: none; }
+.d3.gold { filter: none; }
+.d3.gold .e { filter: brightness(0) invert(.72) sepia(1) saturate(5) hue-rotate(2deg) brightness(.95); }
+

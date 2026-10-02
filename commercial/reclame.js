@@ -1,5 +1,5 @@
 'use strict';
-// Flippo's – de reclame. Eén tijdlijn van 80 seconden: voice-over, muziek, geluidseffecten en veertien korte scènes.
+// Flippo's – de reclame. Eén tijdlijn van 80 seconden: voice-over, muziek, geluidseffecten en zestien korte scènes.
 
 const stage = document.getElementById('stage');
 const qs = new URLSearchParams(location.search);
@@ -105,9 +105,9 @@ function flash(root, o = .85) { const f = mk(root, 'flash'); A(f, [{ opacity: o 
 
 // dichte map
 function book(root, cover, w, x, y, cls = '') {
-  const h = w * (cls === 'pk' ? 1.11 : 1.475);   // de Pokémon-map is lager
-  // de rug in pixels: een percentage zou van de breedte van het hele beeld uitgaan
-  const b = mk(root, 'book ' + cls, `width:${w}px;height:${h}px;left:${x - w / 2}px;top:${y - h / 2}px;padding-left:${w * .05}px`);
+  // verhoudingen van het spel: kaft 880 breed plus een rug van 40, en 1300 hoog (de Pokémon-map 980)
+  const h = w * (cls === 'pk' ? 980 : 1300) / 920;
+  const b = mk(root, 'book ' + cls, `--w:${w}px;width:${w}px;height:${h}px;left:${x - w / 2}px;top:${y - h / 2}px`);
   img(b, cover);
   return b;
 }
@@ -180,7 +180,7 @@ add(0, ['01', .5], () => {
 });
 
 // 2 · VIER MAPPEN – WELKE PAK JIJ?
-add(5, ['02', .3], () => {
+add(4.5, ['02', .3], () => {
   const c = scene();
   const books = COVERS.map(([src, year, cls], i) => {
     const x = 245 + i * 370, rot = [-5, 3, -4, 2][i];
@@ -191,7 +191,7 @@ add(5, ['02', .3], () => {
   });
   let w;
   at(450, () => { w = word(c, 'VIER MAPPEN!', 800, 120, 150, -3); });
-  at(2500, () => { wordOut(w); w = word(c, 'WELKE PAK JIJ?', 800, 120, 150, 3); books.forEach((b, i) => A(b, [{ translate: '0 0' }, { translate: '0 -40px' }, { translate: '0 0' }], { duration: 330, delay: i * 110, fill: 'none', easing: 'ease-in-out' })); });
+  at(2450, () => { wordOut(w); w = word(c, 'WELKE PAK JIJ?', 800, 120, 150, 3); books.forEach((b, i) => A(b, [{ translate: '0 0' }, { translate: '0 -40px' }, { translate: '0 0' }], { duration: 330, delay: i * 110, fill: 'none', easing: 'ease-in-out' })); });
   at(3700, () => {
     wordOut(w); sfx('whoosh');
     books.forEach((b) => b._s?.remove());
@@ -215,7 +215,7 @@ add(5, ['02', .3], () => {
 });
 
 // 3 · DE ZAK CHIPS: KNIJP… POP!
-add(11, ['03', .3], () => {
+add(10.5, ['03', .8], () => {
   const c = scene();
   rays(c, 'rgba(255,255,255,.2)');
   const W = 330, H = 550, bx = 800, by = 420;
@@ -257,7 +257,7 @@ add(11, ['03', .3], () => {
 });
 
 // 4 · VIJF FLIPPO'S! WELKE HEB JIJ AL?
-add(17.5, ['04', .3], () => {
+add(15.8, ['04', .15], () => {
   const c = scene();
   for (let i = 0; i < 12; i++) { const s = rr(50, 90); img(c, `${IMG}flippo-1/chip-${1 + (i % 5)}.webp`, 'chip', `width:${s}px;left:${rr(40, 1500)}px;top:${rr(700, 840)}px;transform:rotate(${rr(0, 360)}deg)`); }
   const els = [1, 6, 3, 12, 14].map((id, i) => {
@@ -268,7 +268,7 @@ add(17.5, ['04', .3], () => {
   });
   let w;
   at(250, () => { w = word(c, "VIJF FLIPPO'S!", 800, 170, 170, -4); });
-  at(1600, () => {
+  at(1950, () => {
     wordOut(w); word(c, 'WELKE HEB JIJ AL?', 800, 170, 140, 3);
     els.forEach((e, i) => A(e, [{ translate: '0 0', rotate: '0deg' }, { translate: '0 -90px', rotate: '20deg' }, { translate: '0 0', rotate: '0deg' }], { duration: 380, delay: i * 90, iterations: 3, fill: 'none', easing: 'ease-in-out' }));
     sfx('boing'); sfx('boing', 400);
@@ -276,7 +276,7 @@ add(17.5, ['04', .3], () => {
 });
 
 // 5 · SCHUIF ZE IN JE MAP
-add(21.5, ['05', .3], () => {
+add(19.3, ['05', .3], () => {
   const c = scene();
   const pg = mk(c, 'pg', 'left:310px;top:185px;width:980px;height:690px');
   mk(pg, 'ttl', 'left:4%;font-size:22px', 'Flippo · 1–8');
@@ -299,7 +299,7 @@ add(21.5, ['05', .3], () => {
 });
 
 // 6 · SLA ZELF DE BLADZIJDE OM – MEER DAN VIJFHONDERD
-add(27, ['06', .3], () => {
+add(23.3, ['06', .3], () => {
   const c = scene();
   const W = 430, H = 634, top = 150;
   const sp = mk(c, 'spread', `left:${800 - W}px;top:${top}px;width:${W * 2}px;height:${H}px;perspective:2600px`);
@@ -316,7 +316,7 @@ add(27, ['06', .3], () => {
   A(sp, [{ transform: 'scale(.6) rotate(-8deg)' }, { transform: 'scale(1) rotate(0deg)' }], { duration: 380, easing: BOUNCE });
   let w;
   at(300, () => { w = word(c, 'SLA OM!', 800, 78, 120, -4); });
-  at(2400, () => {
+  at(2700, () => {
     wordOut(w); rays(c);
     word(c, "545 FLIPPO'S!", 800, 460, 176, -5, { burst: [1500, 640] });
     shake(c, 22, 400); flash(c.parentNode, .6); sfx('sparkle');
@@ -324,7 +324,7 @@ add(27, ['06', .3], () => {
 });
 
 // 7 · KLIK! KLIK! KLIK!
-add(33.5, ['07', .3], () => {
+add(28.5, ['07', .1], () => {
   const c = scene();
   const R = 140, D = R * 1.68, cx = 800, cy = 560;
   const grp = mk(c, '', 'position:absolute;inset:0');
@@ -333,8 +333,8 @@ add(33.5, ['07', .3], () => {
   sfx('thud', 380);
   let w;
   at(300, () => { w = word(c, 'EN DEZE?', 800, 110, 150, -4); });
-  at(1700, () => { wordOut(w); w = word(c, 'KLIK ZE IN ELKAAR!', 800, 110, 124, 3); });
-  [[251, -1, 0, 3600, 300, 330, -12], [262, 1, 0, 4200, 1300, 330, 10], [274, 0, -1, 4800, 1250, 760, -6]].forEach(([id, dx, dy, t, wx, wy, wr]) => at(t - 260, () => {
+  at(2950, () => { wordOut(w); w = word(c, 'KLIK ZE IN ELKAAR!', 800, 110, 124, 3); });
+  [[251, -1, 0, 4650, 300, 330, -12], [262, 1, 0, 5300, 1300, 330, 10], [274, 0, -1, 5900, 1250, 760, -6]].forEach(([id, dx, dy, t, wx, wy, wr]) => at(t - 260, () => {
     const e = fl(grp, f2(id), R * 2, cx + dx * D, cy + dy * D);
     A(e, [{ transform: `translate(${dx * 900}px,${dy * 700}px) rotate(${rr(-300, 300)}deg)` }, { transform: 'translate(0,0) rotate(0deg)' }], { duration: 260, easing: 'cubic-bezier(.5,0,.9,.5)' });
     at(t, () => {
@@ -344,11 +344,11 @@ add(33.5, ['07', .3], () => {
       void k;
     });
   }));
-  at(5500, () => A(grp, [{ transform: 'translateY(0) rotate(0deg)' }, { transform: 'translateY(-60px) rotate(-6deg)' }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 360, iterations: 2, fill: 'none', easing: 'ease-in-out' }));
+  at(6100, () => A(grp, [{ transform: 'translateY(0) rotate(0deg)' }, { transform: 'translateY(-60px) rotate(-6deg)' }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 360, iterations: 2, fill: 'none', easing: 'ease-in-out' }));
 });
 
 // 8 · WAUW! IN 3D
-add(40, ['08', .3], () => {
+add(35, ['08', .3], () => {
   const c = scene('blue');
   rays(c, 'rgba(255,255,255,.13)', 7000);
   const holder = mk(c, '', 'position:absolute;inset:0;perspective:1500px');
@@ -367,7 +367,7 @@ add(40, ['08', .3], () => {
 });
 
 // 9 · VAN DICHTBIJ: VOORKANT… ACHTERKANT!
-add(45, ['09', .3], () => {
+add(39, ['09', .05], () => {
   const c = scene('blue');
   rays(c, 'rgba(255,225,0,.16)', 12000);
   const holder = mk(c, '', 'position:absolute;inset:0;perspective:1600px');
@@ -378,26 +378,26 @@ add(45, ['09', .3], () => {
   A(world, [{ transform: 'rotateX(-8deg) rotateY(32deg)' }, { transform: 'rotateY(0deg)' }], { duration: 300, delay: 3400, fill: 'forwards' });
   let w;
   at(350, () => { w = word(c, 'VAN DICHTBIJ!', 800, 96, 120, -3); });
-  at(3700, () => { word(c, 'VOORKANT!', 330, 770, 92, -8); sfx('ding2'); });
-  at(5000, () => {
+  at(3900, () => { word(c, 'VOORKANT!', 330, 770, 92, -8); sfx('ding2'); });
+  at(5300, () => {
     A(world, [{ transform: 'rotateY(0deg)' }, { transform: 'rotateY(180deg)' }], { duration: 480, easing: 'cubic-bezier(.4,0,.2,1.4)', fill: 'forwards' });
     A(world, [{ transform: 'rotateX(6deg) rotateY(160deg)' }, { transform: 'rotateX(-6deg) rotateY(200deg)' }], { duration: 800, delay: 480, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out', fill: 'forwards' });
     sfx('whoosh');
   });
-  at(5300, () => { word(c, 'ACHTERKANT!', 1240, 770, 92, 8); sfx('ding4'); });
+  at(5650, () => { word(c, 'ACHTERKANT!', 1240, 770, 92, 8); sfx('ding4'); });
   void w;
 });
 
 // 10 · OOK DE DISKEYZ EN DE POKÉMON-MUNTEN DOEN MEE
-add(52.5, ['10', .12], () => {
+add(45.5, ['10', .15], () => {
   const c = scene();
   rays(c, 'rgba(27,99,201,.2)');
   const b1 = book(c, `${IMG}diskeyz/cover.jpg`, 270, 215, 520, 'dk');
   A(b1, [{ transform: 'translateX(-900px) rotate(-40deg)' }, { transform: 'translateX(0) rotate(-6deg)' }], { duration: 450, easing: BOUNCE });
   const b2 = book(c, `${IMG}pokemon/cover.jpg`, 290, 1385, 520, 'pk');
   A(b2, [{ transform: 'translateX(900px) rotate(40deg)' }, { transform: 'translateX(0) rotate(6deg)' }], { duration: 450, delay: 120, easing: BOUNCE });
-  at(420, () => { sticker(c, '2026', 330, 330, 112, 12); sfx('thud'); });
-  at(560, () => { sticker(c, '2001', 1510, 365, 112, -10); sfx('thud'); });
+  at(420, () => { sticker(c, '2026', 330, 340, 112, 12); sfx('thud'); });
+  at(560, () => { sticker(c, '2001', 1510, 375, 112, -10); sfx('thud'); });
   // links Diskeyz, rechts munten; de laatste munt ligt op zijn kop
   [dk(2), dk(25), pk(5), pk(2), dk(21), dk(17), pk(12), pk(23), dk(1), dk(12), pk(9), `${IMG}pokemon/back.webp`].forEach((src, i) => {
     const x = 500 + (i % 4) * 200, y = 345 + Math.floor(i / 4) * 185, e = fl(c, src, 165, x, y);
@@ -407,11 +407,49 @@ add(52.5, ['10', .12], () => {
   sfx('boing', 300); sfx('boing', 700);
   let w;
   at(300, () => { w = word(c, 'DISKEYZ…', 800, 112, 150, -3); });
-  at(1700, () => { wordOut(w); word(c, '…EN POKÉMON-MUNTEN!', 800, 112, 112, 3); sfx('sparkle'); });
+  at(1900, () => { wordOut(w); word(c, '…EN POKÉMON-MUNTEN!', 800, 112, 112, 3); sfx('sparkle'); });
 });
 
-// 11 · KLAP DICHT EN DRAAI OM
-add(56.5, ['11', .3], () => {
+// 11 · SCHEUR HET ZAKJE OPEN EN KIJK WAT ERIN ZIT
+add(49.5, ['10b', .3], () => {
+  const c = scene();
+  rays(c, 'rgba(255,255,255,.2)');
+  // de bovenrand van een zakje is een losse strook die er straks af scheurt
+  const zig = [];
+  for (let i = 0; i <= 12; i++) zig.push(`${(i / 12 * 100).toFixed(1)}% ${(16 + (i % 2 ? 1.8 : -1.4)).toFixed(1)}%`);
+  // het muntenzakje ligt half achter het zakje met Diskeyz
+  const packs = [
+    [`${IMG}pokemon/pack.webp`, 300, 427, 960, 440, 13, 1, [pk(5), pk(2), pk(12), `${IMG}pokemon/back.webp`]],
+    [`${IMG}diskeyz/pack.jpg`, 330, 501, 720, 480, -5, 0, [dk(2), dk(25), dk(21), dk(17)]],
+  ].map(([src, W, H, x, y, rot, side, items], k) => {
+    const el = mk(c, 'pack', `width:${W}px;height:${H}px;left:${x - W / 2}px;top:${y - H / 2}px`);
+    mk(el, 'pp', `background-image:url(${src});clip-path:polygon(${zig.join(',')},100% 100%,0 100%)`);
+    const top = mk(el, 'pp', `background-image:url(${src});clip-path:polygon(0 0,100% 0,${[...zig].reverse().join(',')});transform-origin:${side ? 0 : 100}% 16%`);
+    A(el, [{ transform: `translateY(-950px) rotate(${rot * 6}deg)` }, { transform: `translateY(0) rotate(${rot}deg)` }], { duration: 520, delay: k * 160, easing: BOUNCE });
+    return { el, top, x, y, H, side, items };
+  });
+  sfx('thud', 380); sfx('thud', 540);
+  let w;
+  at(300, () => { w = word(c, 'SCHEUR HET ZAKJE OPEN!', 800, 96, 108, -2); });
+  // eerst het zakje met Diskeyz (vooraan), dan dat met de munten
+  [[packs[1], 1750], [packs[0], 2300]].forEach(([{ el, top, x, y, H, side, items }, t]) => at(t, () => {
+    A(top, [{ transform: 'rotate(0deg)' }, { transform: `rotate(${side ? 24 : -24}deg)`, offset: .45 }, { transform: `translate(${side ? 260 : -260}px,-340px) rotate(${side ? 150 : -150}deg)`, opacity: 0 }], { duration: 620, easing: 'ease-in' });
+    A(el, [{ scale: '1' }, { scale: '1.12 .92' }, { scale: '1' }], { duration: 260, fill: 'none' });
+    sfx('rip'); shake(c, 12, 240);
+    word(c, 'RRRITS!', side ? 1330 : 270, side ? 330 : 400, 112, side ? 10 : -10, { quiet: true, burst: [400, 260], burstCol: side ? '#e8212b' : '#1b63c9' });
+    // de schijven tuimelen eruit en komen onderaan op een rij te liggen
+    items.forEach((src, i) => {
+      const e = fl(c, src, 160, x, y - H * .3, 'z-index:4');
+      const tx = (side ? 990 : 160) + i * 152 - x, ty = 770 - (y - H * .3), r = rr(-25, 25);
+      A(e, [{ transform: 'translate(0,40px) scale(.2)', easing: 'cubic-bezier(.2,.8,.4,1)' }, { transform: `translate(${tx * .5}px,-250px) rotate(${r * 9}deg) scale(1.1)`, offset: .42, easing: 'ease-in' }, { transform: `translate(${tx}px,${ty}px) rotate(${r}deg) scale(1)` }], { duration: 860, delay: 140 + i * 90 });
+      sfx('ding' + ((i + side) % 5), 760 + i * 90);
+    });
+  }));
+  at(2500, () => { wordOut(w); word(c, 'WAT ZIT ERIN?', 800, 96, 150, 3); });
+});
+
+// 12 · KLAP DICHT EN DRAAI OM
+add(54.7, ['11', .3], () => {
   const c = scene();
   const W = 400, H = 590;
   const sp = mk(c, 'spread', `left:800px;top:${470 - H / 2}px;width:${W}px;height:${H}px;perspective:2400px`);
@@ -424,21 +462,73 @@ add(56.5, ['11', .3], () => {
   mk(leaf, 'pg img bk', `width:${W}px;height:${H}px;background-image:url(${IMG}flippo-1/inside.jpg)`);
   let w;
   at(300, () => { w = word(c, 'KLAAR?', 800, 100, 150, -4); });
-  at(1500, () => {
+  at(1400, () => {
     A(leaf, [{ transform: 'translateZ(3px) rotateY(-180deg)' }, { transform: 'translateZ(3px) rotateY(0deg)' }], { duration: 520, easing: 'cubic-bezier(.5,0,.8,.6)' });
     A(sp, [{ transform: 'translateX(0)' }, { transform: `translateX(${-W / 2}px)` }], { duration: 520, easing: 'ease-in-out' });
     sfx('page');
   });
-  at(2020, () => { wordOut(w); w = word(c, 'KLAP!', 300, 470, 160, -12, { burst: [470, 340] }); shake(c, 24, 380); sfx('thud'); });
-  at(3200, () => {
+  at(1920, () => { wordOut(w); w = word(c, 'KLAP!', 300, 470, 160, -12, { burst: [470, 340] }); shake(c, 24, 380); sfx('thud'); });
+  at(3000, () => {
     A(bookEl, [{ transform: 'rotateY(0deg) scale(1)' }, { transform: 'rotateY(90deg) scale(1.15)', offset: .5 }, { transform: 'rotateY(180deg) scale(1)' }], { duration: 700, easing: 'cubic-bezier(.4,0,.2,1)' });
     sfx('whoosh');
   });
-  at(3500, () => word(c, 'DRAAI!', 1300, 470, 150, 10, { burst: [500, 340], burstCol: '#1b63c9' }));
+  at(3250, () => word(c, 'DRAAI!', 1300, 470, 150, 10, { burst: [500, 340], burstCol: '#1b63c9' }));
 });
 
-// 12 · FLIPPO'S! NET ALS IN 1995 – MAAR NU IN JE BROWSER
-add(62.5, ['12', .3], () => {
+// 13 · MAP VOL? GEWONNEN: DE GOUDEN FLIPPO!
+add(59.5, ['goud', .25], () => {
+  const c = scene();
+  // een bladzijde waar nog precies één flippo in moet
+  const pg = mk(c, 'pg', 'left:310px;top:185px;width:980px;height:690px');
+  mk(pg, 'ttl', 'left:4%;font-size:22px', 'Strip Flippo · 243–250');
+  const ids = [243, 244, 245, 246, 247, 248, 249, 250], P = [];
+  ids.forEach((id, i) => {
+    const x = 70 + (i % 4) * 220, y = 120 + Math.floor(i / 4) * 290;
+    const k = mk(pg, 'pocket', `left:${x}px;top:${y}px;width:190px;height:190px;--c:#e63987`, `<b style="font-size:20px;line-height:28px">${id}</b>`);
+    img(k, f1(id), 'ghost');
+    if (i < 7) img(k, f1(id), 'in');
+    P.push([310 + x + 95, 185 + y + 95]);
+  });
+  A(pg, [{ transform: 'translateY(800px) rotate(-6deg)' }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 400, easing: BOUNCE });
+  let w, last, full;
+  at(250, () => { w = word(c, 'NOG ÉÉNTJE…', 800, 86, 120, -3); });
+  at(650, () => {
+    const [x, y] = P[7], e = last = fl(c, f1(250), 190, x, y, 'z-index:5');
+    A(e, [{ transform: 'translate(700px,-420px) rotate(200deg) scale(1.5)', easing: 'cubic-bezier(.2,.8,.3,1)' }, { transform: 'translate(0,-215px) rotate(0deg) scale(1.08)', offset: .45, easing: 'ease-in' }, { transform: 'translate(0,-215px) scale(1.08)', offset: .6, easing: 'cubic-bezier(.5,0,.6,1)' }, { transform: 'translate(0,0) scale(1)' }], { duration: 700 });
+    sfx('zip', 300); sfx('thud', 680);
+  });
+  at(1400, () => { wordOut(w); w = word(c, 'MAP VOL!', 800, 86, 150, 3); full = sticker(c, '250 / 250', 1380, 720, 210, -10, '#1b63c9'); sfx('ding4'); });
+  // spanning: de bladzijde trilt…
+  at(2150, () => {
+    wordOut(w); w = word(c, 'DAN WIN JIJ…', 800, 86, 150, -3);
+    A(pg, [{ rotate: '-1.2deg' }, { rotate: '1.2deg' }], { duration: 70, iterations: 11, direction: 'alternate', fill: 'none' });
+    sfx('squeak'); sfx('squeak', 300);
+  });
+  // …en dan knalt de gouden flippo in beeld
+  at(2950, () => {
+    wordOut(w); last?.remove(); full?.remove();
+    const g = mk(c, 'goldbg');
+    A(g, [{ opacity: 0 }, { opacity: 1 }], { duration: 220 });
+    rays(c, 'rgba(255,221,80,.55)', 9000);
+    rays(c, 'rgba(255,255,255,.22)', 5600);
+    for (let i = 0; i < 26; i++) {
+      const sp = mk(c, 'spark', `left:${rr(40, 1560)}px;top:${rr(40, 860)}px;font-size:${rr(26, 70)}px`, '✦');
+      A(sp, [{ opacity: 0, transform: 'scale(.3) rotate(0deg)' }, { opacity: 1, transform: 'scale(1) rotate(90deg)' }, { opacity: 0, transform: 'scale(.3) rotate(180deg)' }], { duration: rr(900, 1500), delay: rr(0, 900), iterations: Infinity, fill: 'both', easing: 'ease-in-out' });
+    }
+    const holder = mk(c, '', 'position:absolute;inset:0;perspective:1600px');
+    const world = mk(holder, 'world', 'top:53%');
+    const coin = d3(world, 440, `${IMG}gold/front.webp`, `${IMG}gold/back.webp`, 26);
+    coin.classList.add('gold');
+    A(world, [{ transform: 'scale(.02) rotateY(-900deg)' }, { transform: 'scale(1.12) rotateY(-40deg)', offset: .75 }, { transform: 'scale(1) rotateY(0deg)' }], { duration: 800, easing: 'cubic-bezier(.2,1.1,.4,1)' });
+    A(world, [{ transform: 'rotateX(6deg) rotateY(0deg)' }, { transform: 'rotateX(6deg) rotateY(360deg)' }], { duration: 2600, delay: 800, iterations: Infinity, easing: 'linear', fill: 'forwards' });
+    flash(c.parentNode, 1); shake(c, 34, 520); sfx('fanfare'); sfx('pop');
+  });
+  at(3250, () => word(c, 'GEWONNEN!', 800, 120, 210, -5, { burst: [1300, 330] }));
+  at(3800, () => { word(c, 'DE GOUDEN FLIPPO!', 800, 800, 124, 3, { col: '#fff' }); sfx('sparkle'); shake(c, 12, 260); });
+});
+
+// 14 · FLIPPO'S! NET ALS IN 1995 – MAAR NU IN JE BROWSER
+add(65.5, ['12', .1], () => {
   const c = scene();
   rays(c);
   [1, 6, 3, 12, 14, 9, 22, 47, 52, 60, 255, 262].forEach((id, i, a) => {
@@ -447,12 +537,12 @@ add(62.5, ['12', .3], () => {
     A(e, [{ transform: `rotate(${ang + 40}deg) translate(700px,0) rotate(${-ang - 40}deg)` }, { transform: `rotate(${ang + 400}deg) translate(700px,0) rotate(${-ang - 400}deg)` }], { duration: 14000, delay: 600, iterations: Infinity, easing: 'linear', fill: 'forwards' });
   });
   at(250, () => { word(c, "FLIPPO'S!", 800, 290, 290, -5, { burst: [1400, 640] }); shake(c, 22, 400); flash(c.parentNode, .6); });
-  at(1500, () => { word(c, 'NET ALS IN 1995…', 800, 590, 120, 3, { col: '#fff' }); });
-  at(3500, () => { word(c, '…MAAR NU IN JE BROWSER!', 800, 760, 104, -2); sfx('sparkle'); });
+  at(1300, () => { word(c, 'NET ALS IN 1995…', 800, 590, 120, 3, { col: '#fff' }); });
+  at(3950, () => { word(c, '…MAAR NU IN JE BROWSER!', 800, 760, 100, -2); sfx('sparkle'); shake(c, 16, 300); });
 });
 
-// 13 · SPAAR ZE ALLEMAAL!
-add(69.5, ['13', .45], () => {
+// 15 · SPAAR ZE ALLEMAAL!
+add(71.8, ['13', .35], () => {
   const c = scene();
   rays(c, 'rgba(232,33,43,.3)', 5000);
   for (let i = 0; i < 44; i++) {
@@ -464,8 +554,8 @@ add(69.5, ['13', .45], () => {
   at(900, () => { word(c, 'ALLEMAAL!', 800, 590, 270, -5, { burst: [1500, 520] }); shake(c, 30, 450); flash(c.parentNode); sfx('sparkle'); });
 });
 
-// 14 · EINDKAART
-add(73, null, () => {
+// 16 · EINDKAART
+add(74.4, null, () => {
   const c = scene();
   rays(c, 'rgba(255,225,0,.22)', 16000);
   COVERS.forEach(([src, year, cls], i) => {
@@ -474,8 +564,8 @@ add(73, null, () => {
     A(b, [{ translate: '0 0' }, { translate: '0 -12px' }], { duration: 520 + i * 60, delay: 900, iterations: Infinity, direction: 'alternate', fill: 'none', easing: 'ease-in-out' });
     at(600 + i * 150, () => { sticker(c, year, x + 100, cls === 'pk' ? 340 : 295, 92, 10); sfx('thud'); });
   });
-  [[1, 95, 230], [6, 1505, 250], [255, 110, 640], [12, 1490, 630], [3, 80, 440], [14, 1520, 440]].forEach(([id, x, y], i) => {
-    const e = fl(c, fsrc(id), 130, x, y);
+  [[1, 95, 230], [6, 1505, 250], [0, 110, 640], [12, 1490, 630], [3, 80, 440], [14, 1520, 440]].forEach(([id, x, y], i) => {
+    const e = fl(c, id ? fsrc(id) : `${IMG}gold/front.webp`, id ? 130 : 150, x, y, id ? '' : 'filter:drop-shadow(0 0 16px rgba(255,210,60,.95)) drop-shadow(0 7px 5px rgba(0,0,0,.45))');
     A(e, [{ transform: 'scale(0) rotate(-200deg)' }, { transform: `scale(1) rotate(${rr(-20, 20)}deg)` }], { duration: 420, delay: 500 + i * 80, easing: BOUNCE });
   });
   at(150, () => word(c, "FLIPPO'S", 800, 110, 170, -4));
@@ -520,6 +610,12 @@ function sfx(name, ms = 0) {
   else if (name === 'zip') osc('sawtooth', 320, 1500, .16, .16);
   else if (name === 'sparkle') [1047, 1319, 1568, 2093, 2637].forEach((f, i) => osc('sine', f, f, .22, .2, t + i * .055));
   else if (name.startsWith('ding')) { const f = [784, 880, 988, 1047, 1175][+name[4] || 0]; osc('sine', f, f, .3, .32); osc('sine', f * 2, f * 2, .18, .12); }
+  else if (name === 'rip') for (let i = 0; i < 12; i++) noise(.045, .4, 'highpass', rr(2200, 5200), rr(1400, 3000), t + i * .03 + rnd() * .015, 1.4);
+  else if (name === 'fanfare') {
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { osc('square', f, f, .2, .22, t + i * .12); osc('triangle', f / 2, f / 2, .2, .3, t + i * .12); });
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f) => osc('triangle', f, f, 1.5, .2, t + .5));
+    for (let i = 0; i < 18; i++) osc('sine', rr(2200, 5200), rr(2200, 5200), .16, .07, t + .45 + rnd() * 2.2);
+  }
   else if (name === 'page' && audio.bufs.page) { const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = audio.bufs.page; g.gain.value = 2.6; s.connect(g).connect(out); s.start(t); }
 }
 
@@ -530,7 +626,7 @@ async function loadAudio() {
   const [music, page, ...vo] = await Promise.all([get('muziek.mp3'), get('../snd/page.mp3'), ...names.map((n) => get(`vo/${n}.mp3`))]);
   const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), ch = noise.getChannelData(0);
   for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-  const out = ctx.createGain(); out.gain.value = .5; out.connect(ctx.destination);
+  const out = ctx.createGain(); out.gain.value = .42; out.connect(ctx.destination);   // effecten iets onder de stem
   return { ctx, music, noise, out, bufs: { page, ...Object.fromEntries(names.map((n, i) => [n, vo[i]])) } };
 }
 
@@ -539,7 +635,7 @@ function play() {
   const { ctx } = audio;
   ctx.resume();
   const t0 = audio.t0 = ctx.currentTime + .15;
-  const mg = ctx.createGain(); mg.gain.value = .3; mg.connect(ctx.destination);
+  const mg = ctx.createGain(); mg.gain.value = .27; mg.connect(ctx.destination);
   const ms = ctx.createBufferSource(); ms.buffer = audio.music; ms.connect(mg); ms.start(t0);
   // muziek zakt iets weg onder de stem
   const vg = ctx.createGain(); vg.gain.value = 1.25; vg.connect(ctx.destination);
@@ -547,10 +643,10 @@ function play() {
     if (!s.vo) continue;
     const b = audio.bufs[s.vo[0]], st = t0 + s.t + s.vo[1];
     const src = ctx.createBufferSource(); src.buffer = b; src.connect(vg); src.start(st);
-    mg.gain.setTargetAtTime(.17, st - .05, .05);
-    mg.gain.setTargetAtTime(.3, st + b.duration, .15);
+    mg.gain.setTargetAtTime(.12, st - .05, .05);
+    mg.gain.setTargetAtTime(.27, st + b.duration, .15);
   }
-  mg.gain.setTargetAtTime(.42, t0 + 73, .3);
+  mg.gain.setTargetAtTime(.42, t0 + 74.4, .3);
   const wall0 = performance.now() + 150;
   SCENES.forEach((s) => setTimeout(() => { sceneWall = performance.now(); s.fn(); }, wall0 - performance.now() + s.t * 1000));
   setTimeout(() => {
@@ -592,18 +688,18 @@ if (EXPORT) {
   window.__audio = async () => {
     const a = await loadAudio();
     const SR = 44100, off = new OfflineAudioContext(2, Math.ceil(SR * (TOTAL + .6)), SR);
-    const out = off.createGain(); out.gain.value = .5; out.connect(off.destination);
-    const mg = off.createGain(); mg.gain.value = .3; mg.connect(off.destination);
+    const out = off.createGain(); out.gain.value = .42; out.connect(off.destination);
+    const mg = off.createGain(); mg.gain.value = .27; mg.connect(off.destination);
     const ms = off.createBufferSource(); ms.buffer = a.music; ms.connect(mg); ms.start(0);
     const vg = off.createGain(); vg.gain.value = 1.25; vg.connect(off.destination);
     for (const sc of SCENES) {
       if (!sc.vo) continue;
       const b = a.bufs[sc.vo[0]], st = sc.t + sc.vo[1];
       const src = off.createBufferSource(); src.buffer = b; src.connect(vg); src.start(st);
-      mg.gain.setTargetAtTime(.17, st - .05, .05);
-      mg.gain.setTargetAtTime(.3, st + b.duration, .15);
+      mg.gain.setTargetAtTime(.12, st - .05, .05);
+      mg.gain.setTargetAtTime(.27, st + b.duration, .15);
     }
-    mg.gain.setTargetAtTime(.42, 73, .3);
+    mg.gain.setTargetAtTime(.42, 74.4, .3);
     mg.gain.setTargetAtTime(0, TOTAL - .3, .12);
     // elke scène helemaal doorlopen zodat alle geluidseffecten op hun tijdstip worden ingepland
     SCENES.forEach((sc, k) => {
