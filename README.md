@@ -9,7 +9,7 @@ Een speeltafel vol flippo's in je browser. Pak een map, maak zakjes open, verzam
 
 **Spelen: [flippos.bramdehart.nl](https://flippos.bramdehart.nl)** · Broncode: [github.com/bramdehart/flippos](https://github.com/bramdehart/flippos)
 
-https://github.com/user-attachments/assets/7c88f2ad-2a1d-4293-9709-76ffd41c8971
+https://github.com/user-attachments/assets/4b688d54-58ca-41c4-a83d-a1fe86f421bf
 
 ![De mappen liggen over elkaar op tafel; de gekozen map ligt bovenop](docs/keuze.jpg)
 
