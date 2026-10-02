@@ -1011,6 +1011,8 @@ body {
 }
 .album.closed .slab { opacity: 1; transition-delay: .5s; }
 .album.single .slab { display: none; }
+/* klein scherm: de randjes bestaan alleen zolang de map dicht is of dichtslaat (scheelt veel geheugen op een telefoon) */
+.album.wide:not(.closed):not(.closing) .slab { display: none; }
 
 /* ---------- overgang tussen overzicht en map ---------- */
 #chooser h1, .ch-card, .ch-card b, .ch-card span, .ch-card em { transition: opacity .4s, transform .18s; }

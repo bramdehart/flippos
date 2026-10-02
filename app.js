@@ -28,7 +28,10 @@ const SETS = {
 // De pagina die je opent is alleen een schil: de echte pagina (overzicht of een map) draait in een frame.
 // Bij het wisselen laadt de nieuwe pagina in een tweede frame ónder het oude; pas als die is opgebouwd en getekend
 // gaat het oude frame weg. Zo is er tussen twee pagina's nooit een leeg beeld te zien (zie startShell onderaan).
-const SHELL = window.top === window;
+// Op iPhone en iPad doet de schil niet mee: twee volledige pagina's tegelijk kost daar te veel geheugen
+// (lege schermen in Arc, Safari sloot de pagina af). Daar wisselt de site met een gewone paginawissel.
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const SHELL = window.top === window && !IOS;
 let shellApi = null;
 try { shellApi = (!SHELL && parent.flippoShell) || null; } catch { /* in het frame van een andere site */ }
 // welke map: ?map=flippo1 (zo wisselt de site zelf) of het oude #flippo1; geen keuze = eerst het overzicht
@@ -574,7 +577,9 @@ function buildAlbum() {
   album.querySelector('.curl.next').addEventListener('click', (e) => { e.stopPropagation(); turnPage(1); });
   // dikte van de dichte map: een stapel randjes (het pak bladzijden) tussen achter- en voorkaft
   let slabs = '';
-  for (let z = 1.5; z < BOOK_T * L.u; z += 1.5) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
+  // hooguit tien randjes: elk randje is voor de browser een eigen laag ter grootte van een bladzijde
+  const slabStep = Math.max(1.5, BOOK_T * L.u / 10);
+  for (let z = slabStep; z < BOOK_T * L.u; z += slabStep) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
   album.insertAdjacentHTML('beforeend', slabs);
   stage.prepend(wrap);
   applyAlbumState(true);
@@ -737,6 +742,7 @@ function applyAlbumState(instant) {
   if (!instant) albumEl.dataset.from = albumEl.classList.contains('turned') ? 'back' : albumEl.classList.contains('closed') ? 'front' : 'open';
   albumEl.classList.toggle('turned', albumState === 'back');
   albumEl.classList.toggle('single', !!L.single);
+  albumEl.classList.toggle('wide', !!L.wide);
   if (!open) setPan(0, instant);   // dicht ligt de map weer midden in beeld
   albumEl.classList.toggle('p0', curPage % 2 === 0);
   albumEl.classList.toggle('p1', curPage % 2 === 1);
