@@ -577,9 +577,10 @@ function buildAlbum() {
   album.querySelector('.curl.next').addEventListener('click', (e) => { e.stopPropagation(); turnPage(1); });
   // dikte van de dichte map: een stapel randjes (het pak bladzijden) tussen achter- en voorkaft
   let slabs = '';
-  // hooguit tien randjes: elk randje is voor de browser een eigen laag ter grootte van een bladzijde
-  const slabStep = Math.max(1.5, BOOK_T * L.u / 10);
-  for (let z = slabStep; z < BOOK_T * L.u; z += slabStep) slabs += `<div class="slab" style="transform:translateZ(${z}px)"></div>`;
+  // hooguit tien randjes: elk randje is voor de browser een eigen laag ter grootte van een bladzijde.
+  // Het bovenste blijft 1,5 px onder de kaft; ligt het op dezelfde hoogte, dan schijnt het er als witte lijn doorheen.
+  const slabTop = BOOK_T * L.u - 1.5, slabN = Math.min(10, Math.floor(slabTop / 1.5));
+  for (let i = 1; i <= slabN; i++) slabs += `<div class="slab" style="transform:translateZ(${(slabTop * i / slabN).toFixed(2)}px)"></div>`;
   album.insertAdjacentHTML('beforeend', slabs);
   stage.prepend(wrap);
   applyAlbumState(true);

@@ -1596,7 +1596,8 @@ html, body { -webkit-touch-callout: none; }
   box-shadow: none;
   box-sizing: border-box;
 }
-.album.closed .slab { transition-delay: .36s; }
+/* pas tonen als de kaft er (bijna) op ligt; eerder zie je ze als lichte rand op de rechterbladzijde */
+.album.closed .slab { transition-delay: .62s; }
 
 /* telefoon: openen op een rechterbladzijde vanaf de voorkaft: de kaft draait weg, dan komt de bladzijde */
 .album.single.opening.p1[data-from="front"] .leaf.left { display: block; animation: coveraway .3s ease-in forwards; }
