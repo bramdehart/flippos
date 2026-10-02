@@ -1220,7 +1220,7 @@ $('#btn-pack').onclick = () => {
       `<div class="pk pk-flap l" style="clip-path:polygon(${pts.slice(0, 8).join(',')},50% 100%,0 100%)"></div>` +
       `<div class="pk pk-flap r" style="clip-path:polygon(${pts.slice(7).join(',')},100% 100%,50% 100%)"></div>` +
       `</div>` +
-      hint('Pop de zak chips open!', 'knijp in het midden van de zak') +
+      hint('Pop de zak chips open!', 'tik een paar keer of houd hem ingedrukt') +
       // losse chips die rond de zak liggen te wiebelen
       [[-34, 12], [-22, 58], [-40, 88], [128, 20], [118, 66], [138, 96], [-12, 104], [108, 108]].map(([x, y], i) =>
         `<i class="pk-deco" style="left:${x}%;top:${y}%;--r:${i * 53 % 80 - 40}deg;animation-delay:${-i * 0.6}s;background-image:url(${SET.dir}/chip-${1 + (i % 5)}.webp)"></i>`).join('');
@@ -1290,15 +1290,22 @@ function pushSet(prog) {
 }
 
 function onPushDown(e) {
+  // Drie manieren om de zak te laten klappen: een paar keer snel tikken, ingedrukt houden, of knijpen (slepen).
   const r = pack.el.getBoundingClientRect();
-  const fy = (e.clientY - r.top) / r.height;
-  if (fy < 0.18 || fy > 0.82) return;                       // alleen het midden telt als knijpen
-  const x0 = e.clientX, y0 = e.clientY, base = pack.prog + 0.22;   // elke kneep geeft al een zetje
+  const x0 = e.clientX, y0 = e.clientY, base = pack.prog + 0.3;   // elke tik telt flink mee: na vier tikken klapt hij
+  let dragged = 0;
+  const t0 = performance.now();
   pushSet(base);
-  const move = (ev) => { if (pack && !pack.done) pushSet(base + Math.hypot(ev.clientX - x0, ev.clientY - y0) / (r.height * 0.25)); };
+  // ingedrukt houden: de druk loopt vanzelf op, in ruim een halve seconde is hij vol
+  const hold = setInterval(() => {
+    if (!pack || pack.done) return clearInterval(hold);
+    pushSet(base + dragged + (performance.now() - t0) / 650);
+  }, 40);
+  const move = (ev) => { dragged = Math.hypot(ev.clientX - x0, ev.clientY - y0) / (r.height * 0.25); };
   const end = () => {
+    clearInterval(hold);
     pack?.el.removeEventListener('pointermove', move);
-    if (pack && !pack.done) pushSet(pack.prog * 0.75);      // de zak veert een beetje terug
+    if (pack && !pack.done) pushSet(pack.prog * 0.92);      // de zak veert maar een klein beetje terug
   };
   pack.el.addEventListener('pointermove', move);
   pack.el.addEventListener('pointerup', end, { once: true });
