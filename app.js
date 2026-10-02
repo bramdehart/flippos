@@ -25,7 +25,27 @@ const SETS = {
   pokemon: { title: 'Pokémon munten', year: '2001', kind: 'pokemon', from: 1, to: 48, store: 'flippo-state-pk', dir: 'img/pokemon', cover: 'img/pokemon/cover.jpg', back: 'img/pokemon/backcover.jpg', pack: 'img/pokemon/pack.webp', packRatio: 810 / 1152, pageH: 980, r: 108 },
   diskeyz: { title: 'AH Diskeyz', year: '2026', kind: 'diskeyz', from: 1, to: 30, store: 'flippo-state-v1', dir: 'img/diskeyz', cover: 'img/diskeyz/cover.jpg', pack: 'img/diskeyz/pack.jpg', packRatio: 420 / 638 },
 };
-const SET = SETS[location.hash.slice(1)] || null;   // geen keuze = eerst het overzicht
+// De pagina die je opent is alleen een schil: de echte pagina (overzicht of een map) draait in een frame.
+// Bij het wisselen laadt de nieuwe pagina in een tweede frame ónder het oude; pas als die is opgebouwd en getekend
+// gaat het oude frame weg. Zo is er tussen twee pagina's nooit een leeg beeld te zien (zie startShell onderaan).
+const SHELL = window.top === window;
+let shellApi = null;
+try { shellApi = (!SHELL && parent.flippoShell) || null; } catch { /* in het frame van een andere site */ }
+// welke map: ?map=flippo1 (zo wisselt de site zelf) of het oude #flippo1; geen keuze = eerst het overzicht
+const SET = SHELL ? null : SETS[new URLSearchParams(location.search).get('map') || location.hash.slice(1)] || null;
+function goMap(key) {
+  const u = new URL(location.href);
+  u.hash = '';
+  u.searchParams.delete('frame');
+  if (key) u.searchParams.set('map', key); else u.searchParams.delete('map');
+  if (shellApi) shellApi.go(u.href); else location.href = u.href;
+}
+// de animaties van een nieuwe pagina wachten tot de schil haar laat zien
+const revealed = new Promise((done) => {
+  if (!shellApi) return done();
+  window.flippoReveal = done;
+  setTimeout(done, 6000);
+});
 const FLIPPO = !!SET && SET.kind === 'flippo';       // ronde flippo's zonder gleufjes
 const POKE = !!SET && SET.kind === 'pokemon';        // metalen munten: groter, glimmende achterkant
 const FLAT = FLIPPO || POKE;                         // het plaatje heeft zelf al de vorm van de schijf
@@ -562,7 +582,7 @@ function makeDisc(id, props = {}) {
     `<div class="flip">` +
     `<div class="face front"><img src="${imgOf(id)}" alt="${nameOf(id).replace(/"/g, '')}" draggable="false">` +
     (SHINY[id] ? `<div class="shine"${FLIPPO ? ` style="-webkit-mask:url(${imgOf(id)}) center/100% 100%;mask:url(${imgOf(id)}) center/100% 100%"` : ''}></div>` : '') +
-    (POKE ? `<div class="coingloss"></div>` : FLIPPO ? '' : `<div class="gloss"></div>`) + `</div>` +
+    (POKE ? `<div class="coingloss"></div><div class="cfshine" style="animation-delay:${-(id * 0.37 % 4.5).toFixed(2)}s"></div>` : FLIPPO ? '' : `<div class="gloss"></div>`) + `</div>` +
     backHtml(id) +
     `</div>` +
     (SHINY[id] ? `<span class="spark s1">✦</span><span class="spark s2">✦</span><span class="spark s3">✦</span>` : '');
@@ -1655,7 +1675,31 @@ function showChooser() {
     [50, 95, 'flippo-2/341.webp'], [38, 6, 'diskeyz/11.jpg'], [66, 5, 'flippo-1/060.webp'], [12, 92, 'diskeyz/21.jpg'],
     [13, 27, 'pokemon/05.webp'], [86, 29, 'pokemon/02.webp'], [62, 96, 'pokemon/12.webp'], [96, 88, 'pokemon/back.webp'], [3, 72, 'pokemon/23.webp']];
   box.insertAdjacentHTML('afterbegin', '<div class="ch-decos">' + deco.map(([x, y, f], i) =>
-    `<img class="ch-deco${f.endsWith('.jpg') ? ' round' : ''}" src="img/${f}" alt="" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s">`).join('') + '</div>');
+    decoShiny(f)
+      ? `<div class="ch-deco shiny ${decoShiny(f)}" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s"><div class="ch-face"><img src="img/${f}" alt="">` +
+        `<div class="shine"${f.endsWith('.webp') ? ` style="-webkit-mask:url(img/${f}) center/100% 100%;mask:url(img/${f}) center/100% 100%"` : ''}></div></div>` +
+        `<span class="spark s1">✦</span><span class="spark s2">✦</span><span class="spark s3">✦</span></div>`
+      : f.endsWith('back.webp')
+      // de achterkant van een munt glimt hier net als op tafel
+      ? `<div class="ch-deco coinback" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s"><img src="img/${f}" alt=""><div class="cshine"></div><div class="cshine two"></div></div>`
+      // de voorkant van een munt krijgt alleen een zachte glans
+      : f.startsWith('pokemon/') ? `<div class="ch-deco coinfront" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s"><img src="img/${f}" alt=""><div class="cfshine" style="animation-delay:${-i * 0.9}s"></div></div>`
+      : `<img class="ch-deco${f.endsWith('.jpg') ? ' round' : ''}" src="img/${f}" alt="" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s">`).join('') + '</div>');
+  // de losse flippo's en munten wijken een heel klein beetje uit voor de muis
+  const decos = [...box.querySelectorAll('.ch-deco')];
+  box.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    for (const el of decos) {
+      const b = el.parentNode.getBoundingClientRect();
+      const cx = b.left + parseFloat(el.style.left) / 100 * b.width, cy = b.top + parseFloat(el.style.top) / 100 * b.height;
+      const dx = cx - e.clientX, dy = cy - e.clientY, dist = Math.hypot(dx, dy) || 1;
+      const push = Math.max(0, 1 - dist / 170) ** 2 * 12;
+      el.style.setProperty('--dx', (dx / dist * push).toFixed(1) + 'px');
+      el.style.setProperty('--dy', (dy / dist * push).toFixed(1) + 'px');
+      if (el.matches('.coinback, .shiny')) el.style.setProperty('--sh', ((e.clientX + e.clientY) * 0.05 % 100).toFixed(1));
+    }
+  });
+  box.addEventListener('pointerleave', () => decos.forEach((el) => { el.style.setProperty('--dx', '0px'); el.style.setProperty('--dy', '0px'); }));
   // terug uit een map: die kaft komt van de tafel teruggevlogen, de andere mappen verschijnen weer
   let from = null;
   try { from = sessionStorage.getItem('flippo-from'); sessionStorage.removeItem('flippo-from'); } catch { /* geen opslag */ }
@@ -1683,6 +1727,11 @@ function showChooser() {
     if (Math.abs(e.clientX - grab.x) > 6) { grab.moved = true; list.style.scrollSnapType = 'none'; }
     if (grab.moved) list.scrollLeft = grab.sl - (e.clientX - grab.x);
   });
+  // welke losse schijven glimmen ook in hun eigen map (SHINY is hier de lijst van de Diskeyz; Techno-flippo's zijn holo)
+  const decoShiny = (f) => {
+    const n = parseInt(f.split('/')[1], 10);
+    return f.startsWith('diskeyz/') ? SHINY[n] : f.startsWith('flippo-1/') && n >= 121 && n <= 140 ? 'holo' : '';
+  };
   window.addEventListener('pointerup', () => {
     if (!grab) return;
     if (grab.moved) { chooserDragged = performance.now(); list.style.scrollSnapType = ''; goTo(cards[[...dots.children].findIndex((d) => d.classList.contains('on'))]); }
@@ -1701,16 +1750,18 @@ function showChooser() {
     const book = card.querySelector('.ch-book');
     list.scrollLeft = card.offsetLeft + card.offsetWidth / 2 - list.clientWidth / 2;   // de map waar je vandaan komt in beeld
     const unfreeze = freezeList(list);
-    setTimeout(unfreeze, 660);
     card.classList.add('picked');
     box.classList.add('fadeout', 'instant');
     book.style.transform = flyTransform(book, SETS[from]);
-    void book.offsetWidth;
-    box.classList.remove('instant');
-    book.style.transition = 'transform .6s cubic-bezier(.4, 0, .2, 1)';
-    book.style.transform = '';
-    box.classList.remove('fadeout');
-    setTimeout(() => { card.classList.remove('picked'); book.style.transition = ''; }, 650);
+    revealed.then(() => {
+      void book.offsetWidth;
+      box.classList.remove('instant');
+      book.style.transition = 'transform .6s cubic-bezier(.4, 0, .2, 1)';
+      book.style.transform = '';
+      box.classList.remove('fadeout');
+      setTimeout(() => { unfreeze(); mark(); }, 660);
+      setTimeout(() => { card.classList.remove('picked'); book.style.transition = ''; }, 650);
+    });
   } else box.classList.add('enter');   // gewoon binnenkomen: de mappen ploffen één voor één op tafel
 }
 
@@ -1758,7 +1809,7 @@ function pickSet(key, card) {
   book.style.transform = flyTransform(book, SETS[key]);
   setTimeout(() => {
     try { sessionStorage.setItem('flippo-intro', key); } catch { /* geen opslag */ }
-    location.hash = key;
+    goMap(key);
   }, 620);
 }
 
@@ -1772,7 +1823,7 @@ $('#btn-home').onclick = () => {
   if (!wasFront) { albumState = 'front'; applyAlbumState(false); snd('put'); }
   setTimeout(() => {
     try { sessionStorage.setItem('flippo-from', Object.keys(SETS).find((k) => SETS[k] === SET)); } catch { /* geen opslag */ }
-    location.hash = '';
+    goMap('');
   }, wasFront ? 420 : 820);
 };
 window.addEventListener('hashchange', () => location.reload());
@@ -1813,6 +1864,7 @@ if (!SET) {
   pk.classList.toggle('nudge', !discs.length);
   // de eerste keer: uitleg van de gebaren
   let seen = false;
+function startPage() {
   try { seen = localStorage.getItem('flippo-help-' + SET.kind); } catch { /* geen opslag */ }
   if (!seen) setTimeout(showHelp, 900);
   // net gekozen in het overzicht: de map ligt eerst dicht op tafel en slaat dan vloeiend open
@@ -1824,10 +1876,59 @@ if (!SET) {
     albumState = 'front';
     applyAlbumState(true);
     void albumEl.offsetWidth;
-    setTimeout(() => {
+    revealed.then(() => setTimeout(() => {
       document.body.classList.remove('intro');
       if (want !== 'front') { albumState = want; applyAlbumState(false); snd('flip'); }
       rainDiscs(350);
-    }, 140);
+    }, 140));
   } else if (albumState === 'open') rainDiscs(200);
+}
+}
+
+// de schil: houdt het oude frame in beeld tot het nieuwe klaar is
+function startShell() {
+  document.documentElement.classList.add('shell');
+  let latest = null;
+  const show = (f) => {
+    if (f !== latest || f.dataset.shown) return;
+    f.dataset.shown = 1;
+    // een paar beeldjes wachten, zodat het nieuwe frame onder het oude al getekend is
+    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.querySelectorAll('iframe.frame').forEach((o) => { if (o !== f) o.remove(); });
+      try {
+        document.title = f.contentDocument.title;
+        f.contentWindow.focus();
+        f.contentWindow.flippoReveal?.();
+      } catch { /* frame is al weg */ }
+    })));
+  };
+  const open = (href) => {
+    const u = new URL(href);
+    u.searchParams.set('frame', '1');   // een frame mag niet hetzelfde adres hebben als de pagina eromheen
+    const f = document.createElement('iframe');
+    f.className = 'frame';
+    f.title = document.title;
+    f.allow = 'autoplay; fullscreen';
+    f.src = u.href;
+    latest = f;
+    document.body.prepend(f);            // vooraan = onder het frame dat nu in beeld is
+    setTimeout(() => show(f), 5000);     // vangnet als de pagina zich niet meldt
+  };
+  window.flippoShell = {
+    go(href) { history.pushState(null, '', href); open(href); },
+    ready(win) { const f = [...document.querySelectorAll('iframe.frame')].find((x) => x.contentWindow === win); if (f) show(f); },
+  };
+  window.addEventListener('popstate', () => open(location.href));
+  open(location.href);
+}
+
+if (SHELL) startShell();
+else {
+  startPage();
+  if (shellApi) {
+    // pas melden als de plaatjes die nu in beeld horen (kaften, losse flippo's) geladen zijn
+    const imgs = [...document.images].map((im) => im.decode().catch(() => {}));
+    if (SET) imgs.push(...[SET.cover, SET.pack].map((src) => { const im = new Image(); im.src = src; return im.decode().catch(() => {}); }));
+    Promise.race([Promise.all(imgs), new Promise((r) => setTimeout(r, 1200))]).then(() => shellApi.ready(window));
+  }
 }
