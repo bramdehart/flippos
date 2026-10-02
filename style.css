@@ -797,6 +797,8 @@ body {
 .imgback .bname.plain { font-family: "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive; font-weight: 700; color: #8d8748; }
 
 .disc.flat .imgback { border-radius: 50%; overflow: hidden; }
+/* een achterkant met een eigen plaatje heeft geen gekleurde ondergrond nodig: die kwam er als vreemde rand omheen te staan */
+.back.imgback { background: none; }
 
 /* flippo schuift van boven in het hoesje; eenmaal erin ligt hij achter het plastic */
 .disc.slidein { transition: transform .38s cubic-bezier(.45, 0, .55, 1); }
