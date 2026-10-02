@@ -1351,7 +1351,7 @@ function packOpen(fromLeft) {
   el.style.animation = 'none';   // het wiebelen stopt, anders kan het zakje niet kantelen
   const top = el.querySelector('.pk-top');
   dim.classList.add('gone');
-  snd('snap');
+  snd(top ? 'tear' : 'snap');   // zakje: papier scheurt; zak chips: knapt open
   if (top) {
     top.style.transition = 'transform .5s ease-in, opacity .5s';
     top.style.transform = `translate(${fromLeft ? 60 : -60}px, -120px) rotate(${fromLeft ? 70 : -70}deg)`;
@@ -1480,9 +1480,18 @@ function open3d(single) {
     ? `${label(single.id)} · ${nameOf(single.id)}`
     : `Bouwwerk van ${parts.length} flippo's`;
   cancelAnimationFrame(open3d.raf);
-  const tick = () => {
+  let last = performance.now();
+  const tick = (now = performance.now()) => {
     if (!v3) return;
-    if (v3.spin) v3.ry += 0.35;
+    const dt = Math.min(50, Math.max(0, now - last));
+    last = now;
+    if (v3.spin) v3.ry += 0.021 * dt;           // rustig ronddraaien tot je hem aanraakt
+    else if (v3.vel && !v3.ptrs.size) {
+      // nadraaien na een veeg: de vaart neemt langzaam af tot hij weer rustig ronddraait
+      v3.ry += v3.vel * dt;
+      v3.vel *= Math.pow(0.985, dt / 16.7);
+      if (Math.abs(v3.vel) < 0.021) v3.vel = Math.sign(v3.vel) * 0.021;
+    }
     world.style.transform = `scale(${v3.zoom}) rotateX(${v3.rx}deg) rotateY(${v3.ry}deg)`;
     open3d.raf = requestAnimationFrame(tick);
   };
@@ -1495,8 +1504,9 @@ function open3d(single) {
   scene.addEventListener('pointerdown', (e) => {
     if (!v3) return;
     scene.setPointerCapture(e.pointerId);
-    v3.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    v3.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.timeStamp });
     v3.spin = false;
+    v3.vel = 0;
   });
   scene.addEventListener('pointermove', (e) => {
     const p = v3?.ptrs.get(e.pointerId);
@@ -1509,10 +1519,19 @@ function open3d(single) {
     } else {
       v3.ry += (e.clientX - p.x) * 0.5;
       v3.rx = Math.min(89, Math.max(-89, v3.rx - (e.clientY - p.y) * 0.5));
-      p.x = e.clientX; p.y = e.clientY;
+      // snelheid van de veeg onthouden (graden per ms, wat gedempt), voor het nadraaien bij loslaten
+      const dt = Math.max(1, e.timeStamp - p.t);
+      p.v = (p.v || 0) * 0.4 + ((e.clientX - p.x) * 0.5 / dt) * 0.6;
+      p.x = e.clientX; p.y = e.clientY; p.t = e.timeStamp;
     }
   });
-  const up = (e) => v3?.ptrs.delete(e.pointerId);
+  const up = (e) => {
+    const p = v3?.ptrs.get(e.pointerId);
+    if (!p) return;
+    // snel geveegd en meteen losgelaten: laat hem spinnen
+    if (v3.ptrs.size === 1 && e.type === 'pointerup' && e.timeStamp - p.t < 90 && Math.abs(p.v || 0) > 0.15) v3.vel = Math.max(-2.2, Math.min(2.2, p.v));
+    v3.ptrs.delete(e.pointerId);
+  };
   scene.addEventListener('pointerup', up);
   scene.addEventListener('pointercancel', up);
   scene.addEventListener('wheel', (e) => {
@@ -1546,6 +1565,31 @@ function sndPage() {
   o.type = 'triangle'; o.frequency.setValueAtTime(170, t + dur); o.frequency.exponentialRampToValueAtTime(70, t + dur + 0.07);
   og.gain.setValueAtTime(0.16, t + dur); og.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.08);
   o.connect(og).connect(ac.destination); o.start(t + dur); o.stop(t + dur + 0.1);
+}
+
+// scheurend papier: korrelige ruis (veel losse tikjes achter elkaar) door een helder filter
+function sndRip(dur, vol) {
+  const n = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, n, ac.sampleRate), ch = buf.getChannelData(0);
+  let grain = 0, left = 0;
+  for (let i = 0; i < n; i++) {
+    // elke paar honderdste milliseconde een nieuw vezeltje dat knapt, de een harder dan de ander
+    if (left-- <= 0) { grain = Math.random() ** 3; left = 20 + Math.random() * 90; }
+    ch[i] = (Math.random() * 2 - 1) * (0.25 + grain);
+  }
+  const src = ac.createBufferSource(), hp = ac.createBiquadFilter(), bp = ac.createBiquadFilter(), g = ac.createGain(), t = ac.currentTime;
+  src.buffer = buf;
+  src.playbackRate.value = 0.85 + Math.random() * 0.3;
+  hp.type = 'highpass'; hp.frequency.value = 900;
+  bp.type = 'peaking'; bp.Q.value = 0.8; bp.gain.value = 9;
+  bp.frequency.setValueAtTime(2600 + Math.random() * 1200, t);
+  bp.frequency.exponentialRampToValueAtTime(5200, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.setValueAtTime(vol, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(hp).connect(bp).connect(g).connect(ac.destination);
+  src.start(t);
 }
 
 // echte opname van een omslaande bladzijde (Wikimedia Commons, publiek domein); wordt één keer geladen
@@ -1588,13 +1632,14 @@ function snd(type, vol = 1) {
       src.start();
       return;
     }
+    if (type === 'rip') return sndRip(0.09 + Math.random() * 0.05, 0.22);   // een stukje verder scheuren
+    if (type === 'tear') return sndRip(0.34, 0.3);                          // het laatste stuk in één haal
     const [f0, f1, dur, vol0, wave] = {
       snap: [1400, 500, 0.06, 0.25, 'square'],
       slot: [420, 140, 0.1, 0.3, 'triangle'],
       flip: [520, 880, 0.06, 0.12, 'sine'],
       put: [220, 110, 0.06, 0.18, 'triangle'],
       pop: [260, 55, 0.14, 0.55, 'sine'],
-      rip: [1800 + Math.random() * 1200, 300, 0.05, 0.12, 'sawtooth'],
     }[type];
     const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
     o.type = wave;
