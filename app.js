@@ -1674,6 +1674,11 @@ function showChooser() {
     [90, 12, 'diskeyz/02.jpg'], [95, 46, 'flippo-1/044.webp'], [86, 78, 'flippo-1/130.webp'], [72, 93, 'diskeyz/17.jpg'],
     [50, 95, 'flippo-2/341.webp'], [38, 6, 'diskeyz/11.jpg'], [66, 5, 'flippo-1/060.webp'], [12, 92, 'diskeyz/21.jpg'],
     [13, 27, 'pokemon/05.webp'], [86, 29, 'pokemon/02.webp'], [62, 96, 'pokemon/12.webp'], [96, 88, 'pokemon/back.webp'], [3, 72, 'pokemon/23.webp']];
+  // welke losse schijven glimmen ook in hun eigen map (SHINY is hier de lijst van de Diskeyz; Techno-flippo's zijn holo)
+  const decoShiny = (f) => {
+    const n = parseInt(f.split('/')[1], 10);
+    return f.startsWith('diskeyz/') ? SHINY[n] : f.startsWith('flippo-1/') && n >= 121 && n <= 140 ? 'holo' : '';
+  };
   box.insertAdjacentHTML('afterbegin', '<div class="ch-decos">' + deco.map(([x, y, f], i) =>
     decoShiny(f)
       ? `<div class="ch-deco shiny ${decoShiny(f)}" style="left:${x}%;top:${y}%;--r:${(i * 47) % 70 - 35}deg;animation-delay:${-i * 0.7}s"><div class="ch-face"><img src="img/${f}" alt="">` +
@@ -1727,11 +1732,6 @@ function showChooser() {
     if (Math.abs(e.clientX - grab.x) > 6) { grab.moved = true; list.style.scrollSnapType = 'none'; }
     if (grab.moved) list.scrollLeft = grab.sl - (e.clientX - grab.x);
   });
-  // welke losse schijven glimmen ook in hun eigen map (SHINY is hier de lijst van de Diskeyz; Techno-flippo's zijn holo)
-  const decoShiny = (f) => {
-    const n = parseInt(f.split('/')[1], 10);
-    return f.startsWith('diskeyz/') ? SHINY[n] : f.startsWith('flippo-1/') && n >= 121 && n <= 140 ? 'holo' : '';
-  };
   window.addEventListener('pointerup', () => {
     if (!grab) return;
     if (grab.moved) { chooserDragged = performance.now(); list.style.scrollSnapType = ''; goTo(cards[[...dots.children].findIndex((d) => d.classList.contains('on'))]); }
@@ -1835,6 +1835,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ---------- start ----------
+function startPage() {
 if (!SET) {
   showChooser();
 } else {
@@ -1864,7 +1865,6 @@ if (!SET) {
   pk.classList.toggle('nudge', !discs.length);
   // de eerste keer: uitleg van de gebaren
   let seen = false;
-function startPage() {
   try { seen = localStorage.getItem('flippo-help-' + SET.kind); } catch { /* geen opslag */ }
   if (!seen) setTimeout(showHelp, 900);
   // net gekozen in het overzicht: de map ligt eerst dicht op tafel en slaat dan vloeiend open
