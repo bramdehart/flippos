@@ -192,7 +192,9 @@ function computeLayout() {
   const vw = table.clientWidth, vh = table.clientHeight;
   const portrait = vw / vh < 1.05;
   const l = portrait
-    ? { mode: 'p', W: 1000, H: Math.max(1900, Math.round(1000 * vh / vw)), ax: (1000 - PAGE_W * 0.96) / 2, ay: 175, u: 0.96, single: true }   // klein scherm: de bladzijde vult bijna de hele breedte
+    // klein scherm: de map ligt gewoon open met twee bladzijden, maar is breder dan het scherm.
+    // De rug ligt in het midden; de map schuif je opzij om een hele bladzijde te zien (zie setPan).
+    ? { mode: 'p', W: 1000, H: Math.max(1900, Math.round(1000 * vh / vw)), ax: (1000 - (PAGE_W * 2 + SPINE) * 0.96) / 2, ay: 175, u: 0.96, wide: true }
     : { mode: 'l', W: 1600, H: 1000, ax: 350, ay: 22, u: 0.5 };
   l.R = DISC_R * l.u;
   l.aw = (l.single ? PAGE_W : PAGE_W * 2 + SPINE) * l.u;
@@ -253,6 +255,21 @@ function zoomAt(f, cx, cy) {
   applyView();
 }
 
+// de brede map op een klein scherm opzij schuiven: 0 = rug in het midden, +PAN() = linkerbladzijde, -PAN() = rechterbladzijde
+let albumPan = 0;
+const PAN = () => (L.wide ? (PAGE_W + SPINE) / 2 * L.u : 0);
+const AX = () => L.ax + albumPan;   // linkerrand van de map op tafel, met het schuiven meegeteld
+function setPan(v, instant) {
+  const lim = albumState === 'open' ? PAN() : 0;
+  albumPan = Math.max(-lim, Math.min(lim, v));
+  const wrap = albumEl?.parentNode;
+  if (!wrap) return;
+  wrap.classList.toggle('panning', !!instant);
+  wrap.style.setProperty('--pan', albumPan + 'px');
+}
+// de bladzijde waar het om gaat in beeld schuiven
+const focusPage = (p) => { if (L.wide) setPan(p % 2 ? -PAN() : PAN()); };
+
 const bgPointers = new Map();
 let bgTap = 0;
 table.addEventListener('pointerdown', (e) => {
@@ -296,9 +313,16 @@ function pageDragMove(e) {
   const pd = pageDrag;
   if (!pd || pd.id !== e.pointerId) return;
   const dx = e.clientX - pd.sx;
+  if (pd.pan) { setPan(pd.pan.from + dx / K(), true); return; }
   if (!pd.turn) {
     if (Math.abs(dx) < 8) return;
     if (albumState !== 'open') { coverGesture(dx); return; }
+    if (L.wide) {
+      // brede map: slepen schuift de map opzij. Ligt de bladzijde al helemaal in beeld, dan sla je met verder slepen om.
+      const fwd = dx < 0, atEnd = fwd ? albumPan <= -PAN() + 1 : albumPan >= PAN() - 1;
+      if (!atEnd) { pd.pan = { from: albumPan }; setPan(albumPan + dx / K(), true); return; }
+      pd.right = fwd;
+    }
     // rechterblad trek je naar links (vooruit), linkerblad naar rechts (terug); met één blad in beeld telt alleen de richting
     const dir = dx < 0 ? 1 : -1;
     if (!L.single && (dir === 1) !== pd.right) { pageDrag = null; return; }
@@ -320,11 +344,22 @@ function pageDragEnd(e) {
   const pd = pageDrag;
   if (!pd || pd.id !== e.pointerId) return;
   pageDrag = null;
+  if (pd.pan) {
+    // loslaten: de map klikt op de dichtstbijzijnde stand (links, rug in het midden, rechts); een korte veeg telt als één stap
+    const lim = PAN(), stops = [-lim, 0, lim], moved = albumPan - pd.pan.from;
+    const near = (v) => stops.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
+    let to = near(albumPan);
+    if (Math.abs(moved) > 30 / K() && to === near(pd.pan.from)) to = near(pd.pan.from + Math.sign(moved) * lim);
+    setPan(to);
+    noClickUntil = performance.now() + 300;
+    return;
+  }
   if (!pd.turn) return;
   if (pd.turn !== turn) return;
   if (pd.prog > 0.28) {
     // ver genoeg: het blad valt vanzelf verder om
     turn.ok = true;
+    focusPage(pd.dir === 1 ? 0 : 1);   // na het omslaan lees je verder op de bladzijde die net is omgeslagen
     pd.anims.forEach((a) => a.play());
     snd('page');
   } else {
@@ -499,6 +534,7 @@ function buildAlbum() {
   const wrap = document.createElement('div');
   wrap.className = 'albumwrap';
   wrap.style.left = L.ax + 'px';
+  albumPan = 0;
   wrap.style.top = L.ay + 'px';
   const album = document.createElement('div');
   album.className = 'album' + (FLIPPO ? ' binder' : POKE ? ' pokebook' : '');
@@ -511,7 +547,8 @@ function buildAlbum() {
   slots = {};
   PAGES.forEach((pg, pi) => (pg.slots || []).forEach((sl) => {
     slots[sl.id] = {
-      x: L.ax + ((L.single ? 0 : (pi % 2) * (PAGE_W + SPINE)) + sl.x) * L.u,
+      bx: L.ax + ((L.single ? 0 : (pi % 2) * (PAGE_W + SPINE)) + sl.x) * L.u,
+      get x() { return this.bx + albumPan; },   // de map kan opzij geschoven zijn
       y: L.ay + sl.y * L.u,
       page: pi, el: null, uid: occupied[sl.id] ?? null,
     };
@@ -562,7 +599,7 @@ function remap(old) {
     for (const m of g) { seen.add(m); m.x = nx + (m.x - cx) * q; m.y = ny + (m.y - cy) * q; }
     // niet bovenop de map laten belanden
     const c = { x: nx, y: ny }, mrg = L.R;
-    if (c.x > L.ax - mrg && c.x < L.ax + L.aw + mrg && c.y > L.ay - mrg && c.y < L.ay + L.ah + mrg) {
+    if (c.x > AX() - mrg && c.x < AX() + L.aw + mrg && c.y > L.ay - mrg && c.y < L.ay + L.ah + mrg) {
       const t = tableSpot();
       for (const m of g) { m.x += t.x - nx; m.y += t.y - ny; }
     }
@@ -674,7 +711,7 @@ function tableSpot() {
     const x = L.R * 1.1 + Math.random() * (L.W - L.R * 2.2);
     const y = L.R * 1.1 + Math.random() * (L.H - L.R * 2.2);
     const m = L.R * 1.15;
-    if (x > L.ax - m && x < L.ax + L.aw + m && y > L.ay - m && y < L.ay + L.ah + m) continue;
+    if (x > AX() - m && x < AX() + L.aw + m && y > L.ay - m && y < L.ay + L.ah + m) continue;
     // niet onder de voorwerpen in de hoeken van het scherm (zakje, stapeltje mappen, knopjes)
     const sr = stage.getBoundingClientRect(), tr = table.getBoundingClientRect();
     const px = sr.left + x * K() - tr.left, py = sr.top + y * K() - tr.top, rr = L.R * K();
@@ -700,6 +737,7 @@ function applyAlbumState(instant) {
   if (!instant) albumEl.dataset.from = albumEl.classList.contains('turned') ? 'back' : albumEl.classList.contains('closed') ? 'front' : 'open';
   albumEl.classList.toggle('turned', albumState === 'back');
   albumEl.classList.toggle('single', !!L.single);
+  if (!open) setPan(0, instant);   // dicht ligt de map weer midden in beeld
   albumEl.classList.toggle('p0', curPage % 2 === 0);
   albumEl.classList.toggle('p1', curPage % 2 === 1);
   const step = L.single ? 1 : 2;
@@ -724,7 +762,7 @@ function setPage(p) {
   if (p === curPage) return;
   if (startTurn(p, false)) snd('page');
 }
-const turnPage = (dir) => setPage((turn ? turn.to : curPage) + dir * (L.single ? 1 : 2));
+const turnPage = (dir) => { const was = curPage; setPage((turn ? turn.to : curPage) + dir * (L.single ? 1 : 2)); if (curPage !== was) focusPage(dir > 0 ? 0 : 1); };
 
 // ---------- bladzijde omslaan ----------
 // Het blad dat omslaat bestaat uit de échte bladzijden (geen kopieën): de voorkant is de oude
@@ -1003,6 +1041,7 @@ function onMove(e) {
     group.forEach((g) => { g.el.classList.remove('anim'); g.el.classList.add('drag'); });
     if (albumState === 'open' && group.length === 1 && slots[d.id].uid == null) {
       setPage(slots[d.id].page);   // blader vanzelf naar de pagina waar hij hoort
+      focusPage(slots[d.id].page); // en schuif die bladzijde in beeld
       slots[d.id].el?.classList.add('target');
     }
   }
@@ -1040,7 +1079,7 @@ function onUp(e) {
   if (group.length === 1 && albumState === 'open') {
     const s = slots[d.id];
     // op een klein scherm hoef je niet te mikken: loslaten ergens op de map is genoeg
-    const onAlbum = L.single && d.x > L.ax && d.x < L.ax + L.aw && d.y > L.ay && d.y < L.ay + L.ah;
+    const onAlbum = L.wide && d.x > AX() && d.x < AX() + L.aw && d.y > L.ay && d.y < L.ay + L.ah;
     if (s.uid == null && slotOpen(d.id) && (onAlbum || Math.hypot(d.x - s.x, d.y - s.y) < L.R * 0.95)) {
       putInSlot(d);
       done = true;
@@ -1203,7 +1242,7 @@ function closePack() {
 // ligt de tafel vol, dan verdwijnen de oudste losse (liefst dubbele) flippo's
 function makeRoom(n) {
   const loose = discs.filter((d) => d.slot == null);
-  const over = loose.length + n - (L.single ? 24 : MAX_DISCS);   // op een klein scherm past er minder op tafel
+  const over = loose.length + n - (L.wide ? 24 : MAX_DISCS);   // op een klein scherm past er minder op tafel
   if (over <= 0) return;
   const count = (id) => discs.filter((d) => d.id === id).length;
   const rank = (d) => (d.links.length ? 2 : 0) + (count(d.id) > 1 ? 0 : 1);
@@ -1610,12 +1649,14 @@ function load() {
 function showHelp() {
   const een = POKE ? 'een munt' : 'een flippo', meer = POKE ? 'munten' : 'flippo\'s';   // hoe de schijfjes in deze map heten
   const rows = [
-    ['👆', 'Sleep', L.single ? `${een} naar de map; hij schuift vanzelf in zijn eigen vakje` : `${een} naar zijn vakje in de map`],
+    ['👆', 'Sleep', L.wide ? `${een} naar de map; hij schuift vanzelf in zijn eigen vakje` : `${een} naar zijn vakje in de map`],
     ['🔄', 'Tik', `op ${een} om hem om te draaien`],
     ['🔍', 'Houd vast', POKE ? 'om een munt groot en in 3D te bekijken' : 'om een flippo of bouwwerk groot en in 3D te bekijken'],
     !POKE && ['🧩', 'Sleep tegen elkaar', FLIPPO ? 'om flippo\'s met inkepingen vast te klikken' : 'om twee Diskeyz vast te klikken'],
     !POKE && ['✂️', 'Dubbeltik', 'om een flippo weer los te maken'],
-    ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
+    L.wide
+      ? ['📖', 'Sleep de map opzij', 'om de andere bladzijde te zien; sleep verder om om te slaan of de map dicht te doen']
+      : ['📖', 'Sleep een bladzijde', 'om hem om te slaan, of de kaft om de map dicht te doen'],
     [FLIPPO ? '🍟' : '🎁', FLIPPO ? 'Tik op de zak chips' : 'Tik op het zakje', `linksonder voor nieuwe ${meer}`],
     ['‹', 'Tik op het pijltje', 'linksboven om een andere map te pakken'],
     ['🧹', 'Tik op de bezem', `rechtsonder om alle losse ${meer} van tafel te vegen`],

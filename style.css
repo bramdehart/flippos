@@ -128,7 +128,11 @@ body {
   position: absolute;
   perspective: calc(var(--u) * 5000);
   z-index: 1;
+  /* op een klein scherm is de map breder dan het scherm en schuift hij opzij (setPan in app.js) */
+  translate: var(--pan, 0px) 0;
+  transition: translate .4s cubic-bezier(.3, 0, .2, 1);
 }
+.albumwrap.panning { transition: none; }
 .album {
   position: relative;
   display: flex;
