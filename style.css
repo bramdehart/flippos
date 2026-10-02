@@ -989,9 +989,14 @@ body {
   transition: transform .2s;
 }
 .curl[hidden] { display: none; }
-.curl.next { right: 0; background: linear-gradient(315deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); border-top-left-radius: 100% 100%; clip-path: polygon(100% 0, 0 100%, 0 0); transform-origin: 100% 100%; }
-.curl.prev { left: 0; background: linear-gradient(45deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, #fff 52%, #e7e2d2 100%); clip-path: polygon(0 0, 100% 100%, 100% 0); transform-origin: 0 100%; }
+.curl.next { right: 0; background: linear-gradient(315deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, var(--curl-a, #fff) 52%, var(--curl-b, #e7e2d2) 100%); border-top-left-radius: 100% 100%; clip-path: polygon(100% 0, 0 100%, 0 0); transform-origin: 100% 100%; }
+.curl.prev { left: 0; background: linear-gradient(45deg, transparent 0 46%, rgba(0, 0, 0, .28) 47%, var(--curl-a, #fff) 52%, var(--curl-b, #e7e2d2) 100%); clip-path: polygon(0 0, 100% 100%, 100% 0); transform-origin: 0 100%; }
 .curl:hover { transform: scale(1.25); }
+/* het hoekje krult op vanuit de punt van de bladzijde in plaats van er ineens te staan */
+.curl { animation: curlin .45s cubic-bezier(.3, 1.4, .5, 1) backwards; }
+@keyframes curlin { from { transform: scale(0); } }
+/* in de muntenmap is de onderkant van het blad rood, net als de bladzijden */
+.pokebook .curl { --curl-a: #ff8f93; --curl-b: #c2151f; }
 .album.closed .curl, .album.opening .curl, .album.turning .curl { display: none; }
 .page { cursor: grab; }
 
@@ -1415,7 +1420,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
 html, body { -webkit-touch-callout: none; }
 .packdim { cursor: pointer; }
 /* het hoekje van de volgende bladzijde wipt af en toe op, zodat je ziet dat je kunt bladeren */
-.curl.next { animation: curlhint 5s ease-in-out 2s infinite; }
+.curl.next { animation: curlin .45s cubic-bezier(.3, 1.4, .5, 1) backwards, curlhint 5s ease-in-out 2s infinite; }
 @keyframes curlhint { 0%, 86%, 100% { transform: scale(1); } 91% { transform: scale(1.35); } 96% { transform: scale(1.1); } }
 .curl { cursor: pointer; }
 
