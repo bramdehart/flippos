@@ -764,6 +764,29 @@ body {
 .disc.flat .shine { border-radius: 50%; overflow: hidden; }
 .imgback img { width: 100%; height: 100%; display: block; pointer-events: none; -webkit-user-drag: none; }
 .disc.flat .back:not(.imgback) { border-radius: 50%; overflow: hidden; }
+/* naam en nummer over de schoongepoetste serie-achterkant van een flippo */
+.imgback .bt {
+  position: absolute;
+  left: calc(var(--bx) * 1%);
+  top: calc(var(--by) * 1%);
+  transform: translate(-50%, -50%) rotate(var(--br));
+  font-size: calc(var(--R) * var(--bfs));
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+  color: #fff;
+  pointer-events: none;
+}
+.imgback .bno { font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; font-weight: 900; letter-spacing: -.02em; }
+.imgback .bname.script {
+  font-family: "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive;
+  font-style: italic;
+  font-weight: 700;
+  --o: #3b2a4d;
+  text-shadow: .07em 0 var(--o), -.07em 0 var(--o), 0 .07em var(--o), 0 -.07em var(--o), .05em .05em var(--o), -.05em .05em var(--o), .05em -.05em var(--o), -.05em -.05em var(--o);
+}
+.imgback .bname.block { font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; font-weight: 900; text-transform: uppercase; color: #3d2733; }
+.imgback .bname.plain { font-family: "Marker Felt", "Chalkboard SE", "Comic Sans MS", cursive; font-weight: 700; color: #8d8748; }
 
 .disc.flat .imgback { border-radius: 50%; overflow: hidden; }
 

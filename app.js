@@ -81,6 +81,28 @@ const hasSlits = (id) => slitBase(id) != null;
 const LINKD = FLIPPO ? 1.7 : LINK;
 const colorOf = (id) => (POKE ? ['#e8212b', '#1b63c9', '#eeb02c', '#2a9d4b'][Math.floor((id - 1) / 12)] : FLIPPO ? FCOLORS[seriesOf(id)] : COLORS[Math.floor((id - 1) / 5)]);
 
+// naam zoals hij op de achterkant staat: bij World Flippo's alleen het karakter, niet het land erachter
+function backNameOf(id, n) {
+  const full = FLIPPOS.names[id] || '';
+  if (n.pick !== 'char') return n.lower ? full.toLowerCase() : full;
+  return FLIPPOS.chars.filter((c) => full.startsWith(c)).sort((a, b) => b.length - a.length)[0] || '';
+}
+function backText(id, bt) {
+  const span = (cls, o, fs, txt) => `<span class="bt ${cls}" style="--bx:${o.x};--by:${o.y};--br:${o.r || 0}deg;--bfs:${fs.toFixed(3)}${o.color ? `;color:${o.color}` : ''}">${txt}</span>`;
+  let lines = bt.name ? [backNameOf(id, bt.name)] : [''];
+  // heel lange namen over twee regels, bij de spatie die het dichtst bij het midden ligt
+  if (lines[0].length > 22) {
+    const s = lines[0], mid = s.length / 2;
+    const cut = [...s.matchAll(/ +/g)].sort((a, b) => Math.abs(a.index - mid) - Math.abs(b.index - mid))[0];
+    if (cut) lines = [s.slice(0, cut.index), s.slice(cut.index + cut[0].length)];
+  }
+  // lange namen krimpen zodat ze binnen de breedte van het naamvak blijven
+  const len = Math.max(...lines.map((l) => l.length));
+  const fs = len ? Math.min(bt.name.fs, bt.name.w / (len * (bt.name.kind === 'block' ? .62 : .43))) : 0;
+  const no = id + (bt.no.suffix || '');
+  return span('bno', bt.no, bt.no.fs * (String(id).length > 2 ? .88 : 1), no) + (len ? span(`bname ${bt.name.kind}`, bt.name, fs, lines.join('<br>')) : '');
+}
+
 function backHtml(id) {
   if (POKE) return `<div class="face back imgback coinback"><img src="${SET.dir}/back.webp" alt="" draggable="false"><div class="cshine"></div><div class="cshine two"></div></div>`;
   if (!FLIPPO) {
@@ -88,9 +110,11 @@ function backHtml(id) {
     return `<div class="face back"><div class="emo">${emo}</div><div class="food">${food}</div><div class="no">${pad2(id)}</div></div>`;
   }
   const si = seriesOf(id), ser = FLIPPOS.series[si];
-  const src = FLIPPOS.ownBack.includes(id) ? `${SET.dir}/b${pad3(id)}.webp` : ser.back ? `${SET.dir}/back-${pad2(si + 1)}.webp` : '';
+  // één scan per serie: naam en nummer zijn daar weggepoetst en komen er hier per flippo overheen
+  const bt = FLIPPOS.ownBack.includes(id) ? null : FLIPPOS.backText[si];
+  const src = FLIPPOS.ownBack.includes(id) ? `${SET.dir}/b${pad3(id)}.webp` : ser.back ? `${SET.dir}/back-${pad2(si + 1)}${bt ? '-clean' : ''}.webp` : '';
   return src
-    ? `<div class="face back imgback"><img src="${src}" alt="" draggable="false"></div>`
+    ? `<div class="face back imgback"><img src="${src}" alt="" draggable="false">${bt ? backText(id, bt) : ''}</div>`
     : `<div class="face back"><div class="emo">🌀</div><div class="food">${ser.name}</div><div class="no">${id}</div></div>`;
 }
 
